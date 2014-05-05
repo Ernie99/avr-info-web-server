@@ -1,3 +1,8 @@
+/** @file UartTermBasic.c
+ *  @brief Implementation, see header for API
+ *  @author Ernie H
+ */
+
 #include "UartTermBasic.h"
 #include <avr/io.h>
 

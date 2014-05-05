@@ -1,10 +1,8 @@
-/*
- * TestUART.c
- *
- * Created: 3/2/2014 2:14:24 PM
- *  Author: Ernie
+/** @file main.c
+ *  @brief Function prototypes and implementation to control web-server
+ *  @author Ernie H
  */ 
-
+ 
 #define F_CPU 16000000UL
 #include <util/delay.h>
 #include <avr/io.h>
@@ -18,7 +16,6 @@
 void printTimeDayDate(void);
 void setTimeDayDate(uint8_t second, uint8_t minute, uint8_t hour, uint8_t day,
 	uint8_t date, uint8_t month, uint8_t year);
-
 
 int main(void)
 {

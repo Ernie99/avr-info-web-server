@@ -1,15 +1,13 @@
-/*
- * RtcI2c.c
- *
- * Created: 3/2/2014 4:22:56 PM
- *  Author: Ernie
- */ 
+/** @file I2c.c
+ *  @brief Implementation, see header for API
+ *  @author Ernie H
+ */
+
 #define F_CPU 16000000UL
 #include <util/delay.h>
 #include <avr/io.h>
 #include <util/twi.h>
 #include "I2c.h"
-
 
 #define TWI_SPEED_VAR 0x7D; //1kHz with ps of 3
 #define WAIT_FOR_FLAG while (!(TWCR & (1<<TWINT))) //wait for twi bus operation to finish

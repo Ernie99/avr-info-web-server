@@ -1,0 +1,10 @@
+/**
+
+@mainpage Avr web server to display simple data (time, temp and more...)
+
+@author Ernie H
+
+main file is used to enable features as they are developed. Other files are
+added to enable specific functionality / features.
+
+*/

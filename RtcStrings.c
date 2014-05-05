@@ -1,8 +1,6 @@
-/*
- * RtcStrings.c
- *
- * Created: 3/2/2014 6:28:22 PM
- *  Author: Ernie
+/** @file RtcStrings.c
+ *  @brief Implementation, see header for API
+ *  @author Ernie H
  */
 
 #include <avr/io.h>
