@@ -6,10 +6,10 @@
 #define F_CPU
 #include <avr/io.h>
 
-#define ETHCS PINB1
-#define MOSI PINB2
-#define MISO PINB3
-#define SCK PINB4
+#define ETHCS PINB2
+#define MOSI PINB3
+#define MISO PINB4
+#define SCK PINB5
 
 #define SPI_DDR DDRB
 
@@ -46,6 +46,8 @@ void wiznetSpiInit(void)
 	SPCR |= _BV(SPE) | _BV(MSTR);
 	// set SPI clock to FCPU / 128
 	SPCR |= _BV(SPR1) | _BV(SPR0);
+	
+//	SPI_PORT |= _BV(ETHCS);
 	
 }
 
