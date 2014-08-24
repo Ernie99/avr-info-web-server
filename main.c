@@ -24,11 +24,17 @@ int main(void)
 	ansiPlain();
 	ansiClear();
 	sendString("hello world \n"); // why not ? :-)
+	wiznetSpiInit();
 	//setTimeDayDate(0, 54, 11, 4, 19, 3, 14);
+	W5100_Init();
+	
     while(1)
     {
-		_delay_ms(1000);
-		printTimeDayDate();
+		//_delay_ms(1000);
+		//printTimeDayDate();
+		W5100_test();
+		
+		
     }
 }
 

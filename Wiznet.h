@@ -12,6 +12,9 @@
 void wiznetSpiInit(void);
 void spiSendChar(char c);
 void SPI_Write(unsigned int addr,unsigned char data);
+char SPI_Read(unsigned int addr);
+void W5100_Init(void);
+void W5100_test(void);
 
 
 #endif /* WIZNET_H_ */
