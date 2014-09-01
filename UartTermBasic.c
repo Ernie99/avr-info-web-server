@@ -2,7 +2,7 @@
  *  @brief Implementation, see header for API
  *  @author Ernie H
  */
-
+#include <stdint.h>
 #include "UartTermBasic.h"
 #include <avr/io.h>
 
@@ -60,4 +60,16 @@ char getInput(void)
 	while ((UCSR0A & _BV(RXC0)) == 0) {}; // Do nothing until data have been received and is ready to be read from UDR
 	receivedByte = UDR0; // Fetch the received byte value into the variable "ByteReceived"
 	return receivedByte;
+}
+
+void printOctet(uint8_t octet)
+{
+	uint8_t hundreds = octet / 100;
+	octet = octet % 100;
+	uint8_t tens = octet / 10;
+	octet = octet % 10;
+	uint8_t ones = octet;
+	sendChar(hundreds + 48);
+	sendChar(tens + 48);
+	sendChar(ones + 48);
 }

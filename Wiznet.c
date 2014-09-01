@@ -2,10 +2,12 @@
  *  @brief Implementation, see header for API
  *  @author Ernie H
  */
-
 #define F_CPU 16000000UL
+#include <stdint.h>
 #include <util/delay.h>
 #include <avr/io.h>
+#include "UartTermBasic.h"
+#include "Wiznet.h"
 
 #define ETHCS PINB2
 #define MOSI PINB3
@@ -18,18 +20,38 @@
 #define SPI_PORT PORTB
 #define SPI_DDR  DDRB
 #define SPI_CS   PORTB2
-// Wiznet W5100 Op Code
-#define WIZNET_WRITE_OPCODE 0xF0
-#define WIZNET_READ_OPCODE 0x0F
-// Wiznet W5100 Register Addresses
+
+// Wiznet W5500 Register Addresses
 #define MR   0x0000   // Mode Register
 #define GAR  0x0001   // Gateway Address: 0x0001 to 0x0004
 #define SUBR 0x0005   // Subnet mask Address: 0x0005 to 0x0008
 #define SAR  0x0009   // Source Hardware Address (MAC): 0x0009 to 0x000E
 #define SIPR 0x000F   // Source IP Address: 0x000F to 0x0012
-#define RMSR 0x001A   // RX Memory Size Register
-#define TMSR 0x001B   // TX Memory Size Register
+//#define RMSR 0x001A   // RX Memory Size Register
+//#define TMSR 0x001B   // TX Memory Size Register
 
+#define CS_ENABLE SPI_PORT&=~_BV(ETHCS)
+#define CS_DISABLE SPI_PORT|=_BV(ETHCS)
+
+// private methods
+void spiOneByteSend(uint8_t data);
+void spiTwoBytesSend(uint16_t data);
+void strobeCE(void);
+
+void spiOneByteSend(uint8_t data){
+//	SPI_DDR &= ~_BV(MISO);
+	SPDR = data;
+	while(!(SPSR &_BV(SPIF)));
+		;
+}
+void spiTwoBytesSend(uint16_t data){
+	uint8_t msByte = data >> 8;
+	uint8_t lsByte = data & 0x00ff;
+	spiOneByteSend(msByte);
+	spiOneByteSend(lsByte);
+}
+
+//public methods
 void wiznetSpiInit(void)
 {
 	//set I/O directions for SPI pins
@@ -38,81 +60,39 @@ void wiznetSpiInit(void)
 	SPI_DDR |= _BV(SCK);
 	SPI_DDR &= ~_BV(MISO);
 	
+	CS_DISABLE;
+	
 	// Enable SPI master mode
 	SPCR |= _BV(SPE) | _BV(MSTR);
 	// set SPI clock to FCPU / 128
 	SPCR |= _BV(SPR1) | _BV(SPR0);
 	
-	SPI_PORT |= _BV(ETHCS);
+//	SPI_PORT |= _BV(ETHCS);
 	
 }
 
-void spiSendChar(char c)
-{
-	SPI_DDR &= ~_BV(MISO);
-	SPDR = c;
-	while(!_BV(SPIF))
-		;
+void SPI_WriteByte(uint16_t address, uint8_t block, uint8_t data){
+	block = block << 3;
+	block |= _BV(2); // enable write
+	block |= _BV(0); // one byte size
+	spiTwoBytesSend(address);
+	spiOneByteSend(block);
+	spiOneByteSend(data);
 }
 
-void SPI_Write(unsigned int addr,unsigned char data)
-{
-	// Activate the CS pin
-	SPI_PORT &= ~(1<<SPI_CS);
-	// Start Wiznet W5100 Write OpCode transmission
-	SPDR = WIZNET_WRITE_OPCODE;
-	// Wait for transmission complete
-	while(!(SPSR & (1<<SPIF)));
-	// Start Wiznet W5100 Address High Bytes transmission
-	SPDR = (addr & 0xFF00) >> 8;
-	// Wait for transmission complete
-	while(!(SPSR & (1<<SPIF)));
-	// Start Wiznet W5100 Address Low Bytes transmission
-	SPDR = addr & 0x00FF;
-	// Wait for transmission complete
-	while(!(SPSR & (1<<SPIF)));
-
-	// Start Data transmission
-	SPDR = data;
-	// Wait for transmission complete
-	while(!(SPSR & (1<<SPIF)));
-	// CS pin is not active
-//	_delay_ms(5);
-	SPI_PORT |= (1<<SPI_CS);
-//	_delay_ms(5);
-}
-unsigned char SPI_Read(unsigned int addr)
-{
-	// Activate the CS pin
-	SPI_PORT &= ~(1<<SPI_CS);
-	// Start Wiznet W5100 Read OpCode transmission
-	SPDR = WIZNET_READ_OPCODE;
-	// Wait for transmission complete
-	while(!(SPSR & (1<<SPIF)));
-	// Start Wiznet W5100 Address High Bytes transmission
-	SPDR = (addr & 0xFF00) >> 8;
-	// Wait for transmission complete
-	while(!(SPSR & (1<<SPIF)));
-	// Start Wiznet W5100 Address Low Bytes transmission
-	SPDR = addr & 0x00FF;
-	// Wait for transmission complete
-	while(!(SPSR & (1<<SPIF)));
-
-	// Send Dummy transmission for reading the data
-	SPDR = 0x00;
-	// Wait for transmission complete
-	while(!(SPSR & (1<<SPIF)));
-
-	// CS pin is not active
-//	_delay_ms(5);
-	SPI_PORT |= (1<<SPI_CS);
-//	_delay_ms(5);
+uint8_t SPI_ReadByte(uint16_t address, uint8_t block){
+	block = block << 3;
+	// read enabled
+	block |= _BV(0); // one byte size
+	spiTwoBytesSend(address);
+	spiOneByteSend(block);
+	spiOneByteSend(0xFF);//dummy
 	return(SPDR);
 }
 
-void W5100_test(void)
+void W5500_Test(void)
 {
-	char test;
+/*	char test;
 	for(unsigned int i = 0; i < 10 ; i++)
 	{
 		SPI_Write(GAR,i);
@@ -121,12 +101,39 @@ void W5100_test(void)
 		sendChar(test + 48);
 		sendChar(32);
 		_delay_ms(1000);
-	}
-	
+	}*/
+	/*
+	sendString("lets test some info\n");
+	printOctet(200);
+	sendString("now again\n");
+	printOctet(42);
+	sendString("now again\n");
+	printOctet(123);
+	sendString("all done\n");*/
+	sendString("reeding the default MAC\n");
+	strobeCE();
+	_delay_us(1);
+	CS_ENABLE;
+	_delay_us(1);
+	uint8_t mac0 =SPI_ReadByte(SAR,0);
+	uint8_t mac1 =SPI_ReadByte(SAR+1,0);
+	uint8_t mac2 =SPI_ReadByte(SAR+2,0);
+	uint8_t mac3 =SPI_ReadByte(SAR+3,0);
+	uint8_t mac4 =SPI_ReadByte(SAR+4,0);
+	uint8_t mac5 =SPI_ReadByte(SAR+5,0);
+	printOctet(mac0); sendChar('.');
+	printOctet(mac1); sendChar('.');
+	printOctet(mac2); sendChar('.');
+	printOctet(mac3); sendChar('.');
+	printOctet(mac4); sendChar('.');
+	printOctet(mac5);
+	_delay_us(1);
+	CS_DISABLE;
 }
 
-void W5100_Init(void)
+void W5500_Init(void)
 {
+	/*
 	// Ethernet Setup
 	unsigned char mac_addr[] = {0x00,0x16,0x36,0xDE,0x58,0xF6};
 	unsigned char ip_addr[] = {10,0,1,69};//{192,168,2,10};
@@ -197,5 +204,11 @@ void W5100_Init(void)
 //	printf("Setting Wiznet RMSR and TMSR\n\n");
 	SPI_Write(RMSR,0x55);
 	SPI_Write(TMSR,0x55);
-//	printf("Done Wiznet W5100 Initialized!\n");
+//	printf("Done Wiznet W5100 Initialized!\n");*/
+}
+
+void strobeCE(void){
+	CS_ENABLE;
+	_delay_us(1);
+	CS_DISABLE;
 }

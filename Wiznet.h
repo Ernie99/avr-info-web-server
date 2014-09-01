@@ -10,11 +10,10 @@
 
 
 void wiznetSpiInit(void);
-void spiSendChar(char c);
-void SPI_Write(unsigned int addr,unsigned char data);
-char SPI_Read(unsigned int addr);
-void W5100_Init(void);
-void W5100_test(void);
-
+void SPI_WriteByte(uint16_t address, uint8_t block, uint8_t data);
+uint8_t SPI_ReadByte(uint16_t address, uint8_t block);
+void W5500_Init(void);
+void W5500_Test(void);
+void strobeCE(void);
 
 #endif /* WIZNET_H_ */
