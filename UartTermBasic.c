@@ -62,7 +62,7 @@ char getInput(void)
 	return receivedByte;
 }
 
-void printOctet(uint8_t octet)
+void printOctetDec(uint8_t octet)
 {
 	uint8_t hundreds = octet / 100;
 	octet = octet % 100;
@@ -71,5 +71,19 @@ void printOctet(uint8_t octet)
 	uint8_t ones = octet;
 	sendChar(hundreds + 48);
 	sendChar(tens + 48);
+	sendChar(ones + 48);
+}
+
+void printOctetHex(uint8_t octet)
+{
+	// yes I know I should do a bitshift instead
+	uint8_t sixteens = octet / 16;
+	if(sixteens > 9)
+		sixteens+=7; // to skip to A,B,C,D,E,F
+	octet = octet % 16;
+	uint8_t ones = octet;
+	if(ones > 9)
+		ones+=7; // to skip to A,B,C,D,E,F
+	sendChar(sixteens + 48);
 	sendChar(ones + 48);
 }

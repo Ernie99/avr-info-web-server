@@ -28,7 +28,8 @@ void ansiClear(void);
  */
 void ansiPlain(void);
 
-void printOctet(uint8_t octet);
+void printOctetDec(uint8_t octet);
+void printOctetHex(uint8_t octet);
 
 void sendChar(char data);
 

@@ -27,8 +27,12 @@ int main(void)
 	_delay_ms(500);
 //	ansiPlain();
 //	ansiClear();
-	sendString("hello world \n"); // why not ? :-)
+	sendString("old data is \n");
 	W5500_Test();
+	W5500_Init();
+	sendString("new data is \n");
+	W5500_Test();
+	
 	
 	//setTimeDayDate(0, 54, 11, 4, 19, 3, 14);
 //	W5100_Init();
