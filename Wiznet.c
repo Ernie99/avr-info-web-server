@@ -54,9 +54,6 @@
 #define Sn_PORT1_80 80 // port 80
 
 
-
-
-
 #define CS_ENABLE SPI_PORT&=~_BV(ETHCS)
 #define CS_DISABLE SPI_PORT|=_BV(ETHCS)
 
@@ -102,18 +99,22 @@ void SPI_WriteByte(uint16_t address, uint8_t block, uint8_t data){
 	block = block << 3;
 	block |= _BV(2); // enable write
 	block |= _BV(0); // one byte size
+	CS_ENABLE;
 	spiTwoBytesSend(address);
 	spiOneByteSend(block);
 	spiOneByteSend(data);
+	CS_DISABLE;
 }
 
 uint8_t SPI_ReadByte(uint16_t address, uint8_t block){
 	block = block << 3;
 	// read enabled
 	block |= _BV(0); // one byte size
+	CS_ENABLE;
 	spiTwoBytesSend(address);
 	spiOneByteSend(block);
 	spiOneByteSend(0xFF);//dummy
+	CS_DISABLE;
 	return(SPDR);
 }
 
@@ -134,23 +135,14 @@ void W5500_Init(void)
 }
 
 void W5500_Init_Soc0(void){
-	CS_ENABLE;
 	pollStatusPortZeroAndPrint();
-	CS_ENABLE;
 	SPI_WriteByte(Sn_MR,SOC0_REG,Sn_MR_TCP); // set to TCP mode
-	CS_ENABLE;
 	pollStatusPortZeroAndPrint();
-	CS_ENABLE;
 	SPI_WriteByte(Sn_PORT1,SOC0_REG,Sn_PORT1_80);// set to port 80
-	CS_ENABLE;
 	pollStatusPortZeroAndPrint();
-	CS_ENABLE;
 	SPI_WriteByte(Sn_CR,SOC0_REG, Sn_CR_OPEN); // open
-	CS_ENABLE;
 	pollStatusPortZeroAndPrint();
-	CS_ENABLE;
 	SPI_WriteByte(Sn_CR,SOC0_REG, Sn_CR_LISTEN);
-	CS_DISABLE;
 }
 
 void strobeCE(void){
@@ -160,10 +152,10 @@ void strobeCE(void){
 }
 
 void readAndPrintSettings(void){
-	strobeCE();
-	_delay_us(1);
-	CS_ENABLE;
-	_delay_us(1);
+//	strobeCE();
+//	_delay_us(1);
+//	CS_ENABLE;
+//	_delay_us(1);
 	uint8_t gar0 =SPI_ReadByte(GAR,0);
 	uint8_t gar1 =SPI_ReadByte(GAR+1,0);
 	uint8_t gar2 =SPI_ReadByte(GAR+2,0);
@@ -182,8 +174,8 @@ void readAndPrintSettings(void){
 	uint8_t sipr1 =SPI_ReadByte(SIPR+1,0);
 	uint8_t sipr2 =SPI_ReadByte(SIPR+2,0);
 	uint8_t sipr3 =SPI_ReadByte(SIPR+3,0);
-	_delay_us(1);
-	CS_DISABLE;
+//	_delay_us(1);
+//	CS_DISABLE;
 	sendString("Gateway Address: ");
 	printOctetDec(gar0); sendChar('.');
 	printOctetDec(gar1); sendChar('.');
@@ -234,7 +226,6 @@ const char symbol0x1D[] PROGMEM = "SOCK_LAST_ACK";
 const char symbol0xEF[] PROGMEM = "DIPSHIT";
 const char symbol0xFF[] PROGMEM = "FUCKEDITUP";
 
-// Sn_SR status codes
 const char* const symbolPointers[] PROGMEM = {symbol0x00, symbol0x13,
 	symbol0x14, symbol0x17, symbol0x1C, symbol0x22, symbol0x42,
 	symbol0x15, symbol0x16, symbol0x18, symbol0x1A, symbol0x1B,
