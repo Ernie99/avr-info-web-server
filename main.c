@@ -32,7 +32,7 @@ int main(void)
 	W5500_Init();
 	sendString("new data is \n");
 	W5500_Test();
-	
+	testPoll();
 	
 	//setTimeDayDate(0, 54, 11, 4, 19, 3, 14);
 //	W5100_Init();
