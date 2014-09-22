@@ -53,6 +53,20 @@
 #define Sn_CR_LISTEN 0x02
 #define Sn_PORT1_80 80 // port 80
 
+// pointers and memory
+#define Sn_TX_FSR_H 0x0020 //(Socket n TX Free Size Register)[R][0x0800]
+#define Sn_TX_FSR_L 0x0021 //(Socket n TX Free Size Register)[R][0x0800]
+#define Sn_TX_RD_H 0x0022 //(Socket n TX Read Pointer Register)[R][0x0000]
+#define Sn_TX_RD_L 0x0023 //(Socket n TX Read Pointer Register)[R][0x0000]
+#define Sn_TX_WR_H 0x0024 //(Socket n TX Write Pointer Register)[R/W][0x0000]
+#define Sn_TX_WR_L 0x0025 //(Socket n TX Write Pointer Register)[R/W][0x0000]
+
+#define Sn_RX_RSR_H 0x0026 //(Socket n RX Received Size Register)[R][0x0000]
+#define Sn_RX_RSR_L 0x0027 //(Socket n RX Received Size Register)[R][0x0000]
+#define Sn_RX_RD_H 0x0028 //(Socket n RX Read Data Pointer Register)[R/W][0x0000]
+#define Sn_RX_RD_L 0x0029 //(Socket n RX Read Data Pointer Register)[R/W][0x0000]
+#define Sn_RX_WR_H 0x002A //(Socket n RX Write Pointer Register)[R][0x0000]
+#define Sn_RX_WR_L 0x002B //(Socket n RX Write Pointer Register)[R][0x0000]
 
 #define CS_ENABLE SPI_PORT&=~_BV(ETHCS)
 #define CS_DISABLE SPI_PORT|=_BV(ETHCS)
@@ -289,6 +303,41 @@ void testPoll(){
 		_delay_ms(2000);
 		sendString("\n real code \n");
 		realCode = pollStatus(blank,SOC0_REG,0,0);
+		pollPointersPortZeroAndPrint();
 		sendString(blank);
+		readFew();
 	}
+}
+
+void pollPointersPortZeroAndPrint(){
+	uint8_t data;
+	
+	sendString("TX--> ");
+	for (uint8_t i = 0x20; i <= 0x24; i+=2 ) // hit all the MSB's by incrementing by 2
+	{
+		data = SPI_ReadByte(i,SOC0_REG);
+		printOctetHex(data);
+		data = SPI_ReadByte(i+1,SOC0_REG);
+		printOctetHex(data);
+		sendString(" ");
+	}
+	sendString("RX--> ");
+	for (uint8_t i = 0x26; i <= 0x2A; i+=2 ) // hit all the MSB's by incrementing by 2
+	{
+		data = SPI_ReadByte(i,SOC0_REG);
+		printOctetHex(data);
+		data = SPI_ReadByte(i+1,SOC0_REG);
+		printOctetHex(data);
+		sendString(" ");
+	}
+}
+
+void readFew(){
+	char data;
+	sendChar('\n');
+	for(uint8_t i; i < 20; i++ ){
+		data = SPI_ReadByte(i,SOC0_RXBUF);
+		sendChar(data);	
+	}
+	sendChar('\n');
 }

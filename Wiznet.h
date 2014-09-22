@@ -21,5 +21,7 @@ void writeIp(uint8_t byte0, uint8_t byte1, uint8_t byte2, uint8_t byte3, uint16_
 uint8_t pollStatus(char* statusString, uint8_t block, uint8_t testIndex, uint8_t toTest);
 void pollStatusPortZeroAndPrint(void);
 void testPoll(void);
+void pollPointersPortZeroAndPrint(void);
+void readFew(void);
 
 #endif /* WIZNET_H_ */
