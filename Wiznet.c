@@ -25,9 +25,9 @@
 
 // Wiznet W5500 Block Addresses (5 bits)
 #define COMMON_REG 0b00000
-#define SOC0_REG 0b00001
 #define SOC0_TXBUF 0b00010
 #define SOC0_RXBUF 0b00011
+
 
 // Wiznet W5500 Register Addresses COMMON REGISTER
 #define MR   0x0000   // Mode Register
@@ -75,6 +75,12 @@
 void spiOneByteSend(uint8_t data);
 void spiTwoBytesSend(uint16_t data);
 void strobeCE(void);
+
+uint8_t blockToSocNum(uint8_t socReg);
+
+// private methods to print stuff
+//void pollPointersAndPrint(uint8_t socReg);
+void readFew(uint8_t socReg);
 
 void spiOneByteSend(uint8_t data){
 //	SPI_DDR &= ~_BV(MISO);
@@ -134,10 +140,40 @@ uint8_t SPI_ReadByte(uint16_t address, uint8_t block){
 
 void W5500_Test(void)
 {
-	readAndPrintSettings();
+	sendString("old data is \n");
+	readWnetAndPrintSettings();
+	W5500_Init();
+	sendString("new data is \n");
+	readWnetAndPrintSettings();
+	W5500_Init_Soc(SOC0_REG);
+	W5500_Init_Soc(SOC1_REG);
+	uint8_t codeSoc0 = 0;
+	uint8_t codeSoc1 = 0;
+	char blank0[] = "123456789ABCDEEF";
+	char blank1[] = "123456789ABCDEEF";
+	while(1){
+			_delay_ms(2000);
+			sendString("portA ");
+			codeSoc0 = pollStatus(blank0,SOC0_REG,0,0);
+			sendString(blank0);
+			sendString(" ");
+			pollPointersPortAndPrint(SOC0_REG);
+			sendString("\n");
+			sendString("portB ");
+			codeSoc1 = pollStatus(blank1,SOC1_REG,0,0);
+			sendString(blank1);
+			sendString(" ");
+			pollPointersPortAndPrint(SOC1_REG);
+			sendString("\n\n");
+			
+
+			
+//			sendString(blank);
+//			readFew(socReg);
+		}
 }
 
-void W5500_Init(void)
+void W5500_Init(void) // Write IP address, etc
 {	
 	CS_ENABLE;
 	writeIp(10, 0, 1, 1, GAR);
@@ -148,15 +184,15 @@ void W5500_Init(void)
 
 }
 
-void W5500_Init_Soc0(void){
-	pollStatusPortZeroAndPrint();
-	SPI_WriteByte(Sn_MR,SOC0_REG,Sn_MR_TCP); // set to TCP mode
-	pollStatusPortZeroAndPrint();
-	SPI_WriteByte(Sn_PORT1,SOC0_REG,Sn_PORT1_80);// set to port 80
-	pollStatusPortZeroAndPrint();
-	SPI_WriteByte(Sn_CR,SOC0_REG, Sn_CR_OPEN); // open
-	pollStatusPortZeroAndPrint();
-	SPI_WriteByte(Sn_CR,SOC0_REG, Sn_CR_LISTEN);
+void W5500_Init_Soc(uint8_t socReg){
+	//pollStatusPortAndPrint(socReg);
+	SPI_WriteByte(Sn_MR,socReg,Sn_MR_TCP); // set to TCP mode
+	//pollStatusPortAndPrint(socReg);
+	SPI_WriteByte(Sn_PORT1,socReg,Sn_PORT1_80);// set to port 80
+	//pollStatusPortAndPrint(socReg);
+	SPI_WriteByte(Sn_CR,socReg, Sn_CR_OPEN); // open
+	//pollStatusPortAndPrint(socReg);
+	SPI_WriteByte(Sn_CR,socReg, Sn_CR_LISTEN);
 }
 
 void strobeCE(void){
@@ -165,7 +201,7 @@ void strobeCE(void){
 	CS_DISABLE;
 }
 
-void readAndPrintSettings(void){
+void readWnetAndPrintSettings(void){
 //	strobeCE();
 //	_delay_us(1);
 //	CS_ENABLE;
@@ -256,7 +292,7 @@ uint8_t pollStatus(char* statusString, uint8_t block, uint8_t testIndex, uint8_t
 		CS_DISABLE;
 	}
 	uint8_t index = 14; // last
-	char blank[] = "123456789ABCDEEF";
+	
 	switch (code) {
 		case 0x00: index = 0; break;
 		case 0x13: index = 1; break;
@@ -278,15 +314,15 @@ uint8_t pollStatus(char* statusString, uint8_t block, uint8_t testIndex, uint8_t
 	
 }
 
-void pollStatusPortZeroAndPrint(void){
+void pollStatusPortAndPrint(uint8_t socReg){
 	char blank[] = "123456789ABCDEEF";
-	pollStatus(blank,SOC0_REG,0,0);
+	pollStatus(blank,socReg,0,0);
 	sendString("\n");
 	sendString(blank);
-	sendString("\n");
+//	sendString("\n");
 }
 
-void testPoll(){
+void testPoll(uint8_t socReg){
 	sendString("\n test SR codes \n");
 	char blank[] = "123456789ABCDEEF";
 	uint8_t codes[] = {0x00, 0x13, 0x14, 0x17, 0x1C, 0x22, 0x42, 0x15, 0x16, 0x18, 0x1A, 0x1B, 0x1D};
@@ -297,47 +333,70 @@ void testPoll(){
 		sendString("\n");
 	}
 	sendString("\n done test SR codes \n");
-	W5500_Init_Soc0();
+	W5500_Init_Soc(socReg);
 	uint8_t realCode = 0;
 	while(1){
 		_delay_ms(2000);
 		sendString("\n real code \n");
-		realCode = pollStatus(blank,SOC0_REG,0,0);
-		pollPointersPortZeroAndPrint();
+		realCode = pollStatus(blank,socReg,0,0);
+		pollPointersPortAndPrint(socReg);
 		sendString(blank);
-		readFew();
+		readFew(socReg);
 	}
 }
 
-void pollPointersPortZeroAndPrint(){
+// private utility methods
+
+
+// debug printing methods
+void pollPointersPortAndPrint(uint8_t socReg){
 	uint8_t data;
-	
+	uint8_t soc = blockToSocNum(socReg);
+	soc += 48;
+	sendChar(soc);
 	sendString("TX--> ");
 	for (uint8_t i = 0x20; i <= 0x24; i+=2 ) // hit all the MSB's by incrementing by 2
 	{
-		data = SPI_ReadByte(i,SOC0_REG);
+		data = SPI_ReadByte(i,socReg);
 		printOctetHex(data);
-		data = SPI_ReadByte(i+1,SOC0_REG);
+		data = SPI_ReadByte(i+1,socReg);
 		printOctetHex(data);
 		sendString(" ");
 	}
 	sendString("RX--> ");
 	for (uint8_t i = 0x26; i <= 0x2A; i+=2 ) // hit all the MSB's by incrementing by 2
 	{
-		data = SPI_ReadByte(i,SOC0_REG);
+		data = SPI_ReadByte(i,socReg);
 		printOctetHex(data);
-		data = SPI_ReadByte(i+1,SOC0_REG);
+		data = SPI_ReadByte(i+1,socReg);
 		printOctetHex(data);
 		sendString(" ");
 	}
 }
 
-void readFew(){
+void readFew(uint8_t socReg){
 	char data;
 	sendChar('\n');
 	for(uint8_t i; i < 20; i++ ){
-		data = SPI_ReadByte(i,SOC0_RXBUF);
+		data = SPI_ReadByte(i,socReg + 2); // + 2 to get RXBUF
 		sendChar(data);	
 	}
 	sendChar('\n');
+}
+
+uint8_t blockToSocNum(uint8_t socReg){
+	uint8_t port = 9; // also the error code
+	switch (socReg)
+	{
+		case SOC0_REG: port = 0; break;
+		case SOC1_REG: port = 1; break;
+		case SOC2_REG: port = 2; break;
+		case SOC3_REG: port = 3; break;
+		case SOC4_REG: port = 4; break;
+		case SOC5_REG: port = 5; break;
+		case SOC6_REG: port = 6; break;
+		case SOC7_REG: port = 7; break;
+		default: port = 8; break; // also an error
+	}
+	return port;
 }

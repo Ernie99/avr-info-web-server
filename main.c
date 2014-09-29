@@ -27,12 +27,8 @@ int main(void)
 	_delay_ms(500);
 //	ansiPlain();
 //	ansiClear();
-	sendString("old data is \n");
 	W5500_Test();
-	W5500_Init();
-	sendString("new data is \n");
-	W5500_Test();
-	testPoll();
+//	testPoll(SOC0_REG);
 	
 	//setTimeDayDate(0, 54, 11, 4, 19, 3, 14);
 //	W5100_Init();
