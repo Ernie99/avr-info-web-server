@@ -75,7 +75,7 @@
 void spiOneByteSend(uint8_t data);
 void spiTwoBytesSend(uint16_t data);
 void strobeCE(void);
-
+void printNewMemory(uint8_t a, uint8_t b);
 void spiOneByteSend(uint8_t data){
 //	SPI_DDR &= ~_BV(MISO);
 	SPDR = data;
@@ -332,12 +332,35 @@ void pollPointersPortZeroAndPrint(){
 	}
 }
 
-void readFew(){
-	char data;
-	sendChar('\n');
-	for(uint8_t i; i < 20; i++ ){
-		data = SPI_ReadByte(i,SOC0_RXBUF);
-		sendChar(data);	
+void Fdelay
+{
+	
+	uint8_t rxw_ptr = SPI_ReadByte(Sn_RX_WR_L,SOC0_REG);
+	uint8_t rxsize = SPI_ReadByte(Sn_RX_RSR_L,SOC0_REG);
+	if(rxsize > 0)
+	{
+		sendChar('\n');
+		printNewMemory(rxw_ptr,rxsize);
+		sendChar('\n');
 	}
-	sendChar('\n');
+//	char data;
+	
+	//printNewMemory()
+	//sendChar('\n');
+//	SPI_WriteByte(Sn_RX_RD_L,SOC0_REG,0x00);
+//	SPI_WriteByte(Sn_RX_RD_H,SOC0_REG,0x00);
+//	SPI_WriteByte(Sn_CR,SOC0_REG,0x40);
+	//SPI_WriteByte(Sn_RX_RD_L,SOC0_REG,0xAB);
+}
+
+printNewMemory(uint8_t address, uint8_t size)
+{
+		uint8_t data;
+		for(uint8_t i; i < size; i++ ){
+			data = SPI_ReadByte(address + i,SOC0_RXBUF);
+			sendChar(data);
+		}
+		uint8_t newAddr = address + size;
+		SPI_WriteByte(Sn_RX_RD_L,SOC0_REG,newAddr);
+		SPI_WriteByte(Sn_CR,SOC0_REG,0x40);
 }
