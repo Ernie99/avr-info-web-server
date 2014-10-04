@@ -52,6 +52,7 @@
 #define Sn_CR_OPEN 0x01 // open port, p69
 #define Sn_CR_LISTEN 0x02
 #define Sn_PORT1_80 80 // port 80
+#define Sn_RECV 0x40// RECV command
 
 // pointers and memory
 #define Sn_TX_FSR_H 0x0020 //(Socket n TX Free Size Register)[R][0x0800]
@@ -75,6 +76,7 @@
 void spiOneByteSend(uint8_t data);
 void spiTwoBytesSend(uint16_t data);
 void strobeCE(void);
+void printIfNewRcv(uint8_t socReg);
 
 uint8_t blockToSocNum(uint8_t socReg);
 
@@ -152,24 +154,25 @@ void W5500_Test(void)
 	char blank0[] = "123456789ABCDEEF";
 	char blank1[] = "123456789ABCDEEF";
 	while(1){
-			_delay_ms(2000);
+/*
+			_delay_ms(200);
 			sendString("portA ");
 			codeSoc0 = pollStatus(blank0,SOC0_REG,0,0);
 			sendString(blank0);
 			sendString(" ");
 			pollPointersPortAndPrint(SOC0_REG);
 			sendString("\n");
+			printIfNewRcv(SOC0_REG);
 			sendString("portB ");
 			codeSoc1 = pollStatus(blank1,SOC1_REG,0,0);
 			sendString(blank1);
 			sendString(" ");
 			pollPointersPortAndPrint(SOC1_REG);
-			sendString("\n\n");
-			
-
-			
-//			sendString(blank);
-//			readFew(socReg);
+			sendString("\n\n");			
+			sendString(blank);
+			readFew(socReg);
+*/
+			printIfNewRcv(SOC0_REG);
 		}
 }
 
@@ -399,4 +402,25 @@ uint8_t blockToSocNum(uint8_t socReg){
 		default: port = 8; break; // also an error
 	}
 	return port;
+}
+
+printIfNewRcv(uint8_t socReg){ // only reads LSB for now!
+	uint8_t buffSizeL = SPI_ReadByte(Sn_RX_RSR_L,socReg);
+	uint8_t wrL;
+	uint8_t rdL = SPI_ReadByte(Sn_RX_RD_L,socReg);
+	char data;
+	if(buffSizeL == 0);
+	else
+	{
+		for(uint8_t i; i < buffSizeL; i++ )
+		{
+			data = SPI_ReadByte(rdL+i,socReg + 2); // + 2 to get RXBUF
+			sendChar(data);
+		}
+		wrL = SPI_ReadByte(Sn_RX_WR_L,socReg);
+		SPI_WriteByte(Sn_RX_RD_L,socReg,wrL);
+		SPI_WriteByte(Sn_CR,socReg,Sn_RECV);
+	}
+	
+	return;
 }
