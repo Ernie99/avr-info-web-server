@@ -53,6 +53,7 @@
 #define Sn_CR_LISTEN 0x02
 #define Sn_PORT1_80 80 // port 80
 #define Sn_RECV 0x40// RECV command
+#define Sn_SEND 0x20// SEND command
 
 // pointers and memory
 #define Sn_TX_FSR_H 0x0020 //(Socket n TX Free Size Register)[R][0x0800]
@@ -424,14 +425,23 @@ printIfNewRcv(uint8_t socReg){
 		//SPI_WriteByte(Sn_RX_RD_L,socReg,wrL);
 		setLongReg(socReg, Sn_RX_RD_L, wr);
 		SPI_WriteByte(Sn_CR,socReg,Sn_RECV);
+		testTx(socReg);
 	}
 	
 	return;
 }
+
+char inc = '0';
 testTx(uint8_t socReg){
 	// Read the Tx Write Pointer
-	uint8_t wrL = SPI_ReadByte(Sn_TX_WR_L, socReg);
-	char bla = 'a';
+	uint16_t wr = getLongReg(socReg, Sn_TX_WR_L);
+	SPI_WriteByte(wr+0, socReg + 1, 'H');
+	SPI_WriteByte(wr+1, socReg + 1, 'e');
+	SPI_WriteByte(wr+2, socReg + 1, inc);
+	SPI_WriteByte(wr+3, socReg + 1, 'o');
+	setLongReg(socReg,Sn_TX_WR_L,wr + 4);
+	SPI_WriteByte(Sn_CR,socReg,Sn_SEND);
+	inc++;
 //	for(uint8_t i; i < 5; i++)
 //	{
 //		SPI_WriteByte(wrL)
