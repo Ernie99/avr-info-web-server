@@ -77,6 +77,9 @@ void spiOneByteSend(uint8_t data);
 void spiTwoBytesSend(uint16_t data);
 void strobeCE(void);
 void printIfNewRcv(uint8_t socReg);
+void testTx(uint8_t socReg);
+uint16_t getLongReg(uint8_t socReg, uint8_t lsbAddr);
+void setLongReg(uint8_t socReg, uint8_t lsbAddr, uint16_t data);
 
 uint8_t blockToSocNum(uint8_t socReg);
 
@@ -154,8 +157,8 @@ void W5500_Test(void)
 	char blank0[] = "123456789ABCDEEF";
 	char blank1[] = "123456789ABCDEEF";
 	while(1){
-/*
-			_delay_ms(200);
+
+			_delay_ms(2000);
 			sendString("portA ");
 			codeSoc0 = pollStatus(blank0,SOC0_REG,0,0);
 			sendString(blank0);
@@ -169,9 +172,9 @@ void W5500_Test(void)
 			sendString(" ");
 			pollPointersPortAndPrint(SOC1_REG);
 			sendString("\n\n");			
-			sendString(blank);
-			readFew(socReg);
-*/
+//			sendString(blank);
+//			readFew(socReg);
+
 			printIfNewRcv(SOC0_REG);
 		}
 }
@@ -404,23 +407,54 @@ uint8_t blockToSocNum(uint8_t socReg){
 	return port;
 }
 
-printIfNewRcv(uint8_t socReg){ // only reads LSB for now!
-	uint8_t buffSizeL = SPI_ReadByte(Sn_RX_RSR_L,socReg);
-	uint8_t wrL;
-	uint8_t rdL = SPI_ReadByte(Sn_RX_RD_L,socReg);
+printIfNewRcv(uint8_t socReg){
+	uint16_t buffSize = getLongReg(socReg, Sn_RX_RSR_L);
+	uint16_t wr;
+	uint16_t rd = getLongReg(socReg, Sn_RX_RD_L);
 	char data;
-	if(buffSizeL == 0);
+	if(buffSize == 0);
 	else
 	{
-		for(uint8_t i; i < buffSizeL; i++ )
+		for(uint16_t i; i < buffSize; i++ )
 		{
-			data = SPI_ReadByte(rdL+i,socReg + 2); // + 2 to get RXBUF
+			data = SPI_ReadByte(rd+i,socReg + 2); // + 2 to get RXBUF
 			sendChar(data);
 		}
-		wrL = SPI_ReadByte(Sn_RX_WR_L,socReg);
-		SPI_WriteByte(Sn_RX_RD_L,socReg,wrL);
+		wr = getLongReg(socReg, Sn_RX_WR_L);
+		//SPI_WriteByte(Sn_RX_RD_L,socReg,wrL);
+		setLongReg(socReg, Sn_RX_RD_L, wr);
 		SPI_WriteByte(Sn_CR,socReg,Sn_RECV);
 	}
 	
 	return;
+}
+testTx(uint8_t socReg){
+	// Read the Tx Write Pointer
+	uint8_t wrL = SPI_ReadByte(Sn_TX_WR_L, socReg);
+	char bla = 'a';
+//	for(uint8_t i; i < 5; i++)
+//	{
+//		SPI_WriteByte(wrL)
+//	}
+	
+	
+}
+
+// methods for low level data access
+uint16_t getLongReg(uint8_t socReg, uint8_t lsbAddr)
+{
+	uint16_t buffSizeL = SPI_ReadByte(lsbAddr,socReg);
+	uint16_t buffSizeH = SPI_ReadByte(lsbAddr - 1, socReg);
+	buffSizeH = buffSizeH << 8;
+	return(buffSizeH + buffSizeL);
+}
+
+setLongReg(uint8_t socReg, uint8_t lsbAddr, uint16_t data)
+{
+	uint16_t lsb = data;
+	uint16_t msb = data;
+	lsb = lsb & 0x00FF;
+	msb = msb >> 8;
+	SPI_WriteByte(lsbAddr,socReg,lsb);
+	SPI_WriteByte(lsbAddr - 1,socReg,msb);	
 }
