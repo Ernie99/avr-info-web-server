@@ -84,6 +84,13 @@ void setLongReg(uint8_t socReg, uint8_t lsbAddr, uint16_t data);
 
 uint8_t blockToSocNum(uint8_t socReg);
 
+// new private methods
+uint8_t scanForString(char * string, uint8_t maxLength, uint8_t socReg);
+void printNewWords(uint8_t socReg);
+uint8_t pollForNewToken(uint8_t socReg);
+char * getNewToken(uint8_t socReg, char delimiter);
+
+
 // private methods to print stuff
 //void pollPointersAndPrint(uint8_t socReg);
 void readFew(uint8_t socReg);
@@ -146,8 +153,8 @@ uint8_t SPI_ReadByte(uint16_t address, uint8_t block){
 
 void W5500_Test(void)
 {
-	sendString("old data is \n");
-	readWnetAndPrintSettings();
+//	sendString("old data is \n");
+//	readWnetAndPrintSettings();
 	W5500_Init();
 	sendString("new data is \n");
 	readWnetAndPrintSettings();
@@ -159,25 +166,9 @@ void W5500_Test(void)
 	char blank1[] = "123456789ABCDEEF";
 	while(1){
 
-			_delay_ms(2000);
-			sendString("portA ");
-			codeSoc0 = pollStatus(blank0,SOC0_REG,0,0);
-			sendString(blank0);
-			sendString(" ");
-			pollPointersPortAndPrint(SOC0_REG);
-			sendString("\n");
-			printIfNewRcv(SOC0_REG);
-			sendString("portB ");
-			codeSoc1 = pollStatus(blank1,SOC1_REG,0,0);
-			sendString(blank1);
-			sendString(" ");
-			pollPointersPortAndPrint(SOC1_REG);
-			sendString("\n\n");			
-//			sendString(blank);
-//			readFew(socReg);
-
-			printIfNewRcv(SOC0_REG);
-		}
+//		sendString("hihi");
+		printNewWords(SOC0_REG);
+	}
 }
 
 void W5500_Init(void) // Write IP address, etc
@@ -430,7 +421,92 @@ printIfNewRcv(uint8_t socReg){
 	
 	return;
 }
+//////////////////////////////////////////////////////////////////////////////////////////////////////// begin new methods ////////////////////////////
+void printNewWords(uint8_t socReg){
+	char * mPtr;
+	if(pollForNewToken(socReg)==0)
+	{
+		pollPointersPortAndPrint(socReg);
+		sendString("\n no data yet");
+		_delay_ms(5000);
+	}
+	else
+	{	
+//		sendString("\n some new stuff");
+		sendString("\n");
+		pollPointersPortAndPrint(socReg);
+		sendString("\n");
+		mPtr = getNewToken(socReg, ',');
+//		sendString("\n some new stuff");
+			sendString(mPtr);
+	}
+	return;
+}
 
+uint8_t scanForString(char * string, uint8_t maxLength, uint8_t socReg) // blocking
+{
+	while(1)
+	{
+		while(pollForNewToken(socReg)){
+		}
+	}
+}
+
+//////////////// new methods to break into words
+uint8_t pollForNewToken(uint8_t socReg) // yes, this method is overly verbose
+{
+	uint16_t buffSize = getLongReg(socReg, Sn_RX_RSR_L);
+	if (buffSize == 0)
+		return 0;
+	else
+		return 1;
+}
+
+uint16_t globalRSR = 0;
+uint16_t globalRxWr;
+uint16_t globalRxRd;
+uint16_t globalLastRd;
+
+char * getNewToken(uint8_t socReg, char delimiter) // reads wiznet buffer only to next delimiter
+{
+	char myBuffer[30]; // largest incoming string 30 chars!
+	if(globalRSR == 0) // for first time
+	{
+		globalRSR = getLongReg(socReg, Sn_RX_RSR_L); // update the global RSR
+		globalRxRd = getLongReg(socReg, Sn_RX_RD_L);
+		globalLastRd = globalRxRd;
+	}
+	char data;
+	uint8_t arrayIndex = 0;
+	while(data!=delimiter) // NOT SAFE, need to add code to check for end
+	{
+		data = SPI_ReadByte(globalLastRd,socReg + 2); // + 2 to get RXBUF
+		myBuffer[arrayIndex] = data;
+		arrayIndex++;
+		globalLastRd++;
+	}
+	arrayIndex++;
+	myBuffer[arrayIndex] = '\0';
+/*	
+	if(globalBuffSize == globalLastRd) // we reached the end
+	{
+		myBuffer[0] = 'E';
+		myBuffer[1] = 'N';
+		myBuffer[2] = 'D';
+		myBuffer[3] = '\0';
+		
+		uint16_t wr = getLongReg(socReg, Sn_RX_WR_L);
+		//SPI_WriteByte(Sn_RX_RD_L,socReg,wrL);
+		setLongReg(socReg, Sn_RX_RD_L, wr);
+		SPI_WriteByte(Sn_CR,socReg,Sn_RECV);
+		//		testTx(socReg);
+		globalBuffSize = 0;
+	}*/
+	
+	return myBuffer;
+}
+
+//////////////////////////////////////////////////////////// end new methods //////////////////////////////////
 char inc = '0';
 testTx(uint8_t socReg){
 	// Read the Tx Write Pointer

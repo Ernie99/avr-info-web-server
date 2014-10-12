@@ -25,6 +25,7 @@ int main(void)
 //	twiInit();
 	wiznetSpiInit();
 	_delay_ms(500);
+	sendString("bla");
 //	ansiPlain();
 //	ansiClear();
 	W5500_Test();
@@ -35,6 +36,7 @@ int main(void)
 	
     while(1)
     {
+		
 //		_delay_ms(1000);
 //		printTimeDayDate();
 //		W5100_test();
