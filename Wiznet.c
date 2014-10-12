@@ -470,23 +470,25 @@ uint16_t globalLastRd;
 char * getNewToken(uint8_t socReg, char delimiter) // reads wiznet buffer only to next delimiter
 {
 	char myBuffer[30]; // largest incoming string 30 chars!
-	if(globalRSR == 0) // for first time
-	{
-		globalRSR = getLongReg(socReg, Sn_RX_RSR_L); // update the global RSR
-		globalRxRd = getLongReg(socReg, Sn_RX_RD_L);
-		globalLastRd = globalRxRd;
-	}
+	uint16_t RSR = getLongReg(socReg, Sn_RX_RSR_L);
+	uint16_t count = 0;
+	uint16_t rdPtr = getLongReg(socReg, Sn_RX_RD_L);
+	uint16_t wrPtr = getLongReg(socReg, Sn_RX_WR_L);
+	
 	char data;
 	uint8_t arrayIndex = 0;
-	while(data!=delimiter) // NOT SAFE, need to add code to check for end
+	
+	while((data!=delimiter)&&(count < RSR))
 	{
-		data = SPI_ReadByte(globalLastRd,socReg + 2); // + 2 to get RXBUF
+		data = SPI_ReadByte(count+rdPtr,socReg + 2); // + 2 to get RXBUF
 		myBuffer[arrayIndex] = data;
 		arrayIndex++;
-		globalLastRd++;
+		count++;
 	}
-	arrayIndex++;
+//	arrayIndex++;
 	myBuffer[arrayIndex] = '\0';
+	setLongReg(socReg, Sn_RX_RD_L, rdPtr + count);
+	SPI_WriteByte(Sn_CR,socReg,Sn_RECV);
 /*	
 	if(globalBuffSize == globalLastRd) // we reached the end
 	{
@@ -505,6 +507,7 @@ char * getNewToken(uint8_t socReg, char delimiter) // reads wiznet buffer only t
 	
 	return myBuffer;
 }
+
 
 //////////////////////////////////////////////////////////// end new methods //////////////////////////////////
 char inc = '0';
