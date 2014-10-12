@@ -160,6 +160,7 @@ void W5500_Test(void)
 	while(1){
 
 			_delay_ms(2000);
+			/*
 			sendString("portA ");
 			codeSoc0 = pollStatus(blank0,SOC0_REG,0,0);
 			sendString(blank0);
@@ -175,7 +176,7 @@ void W5500_Test(void)
 			sendString("\n\n");			
 //			sendString(blank);
 //			readFew(socReg);
-
+*/
 			printIfNewRcv(SOC0_REG);
 		}
 }
@@ -425,10 +426,46 @@ printIfNewRcv(uint8_t socReg){
 		//SPI_WriteByte(Sn_RX_RD_L,socReg,wrL);
 		setLongReg(socReg, Sn_RX_RD_L, wr);
 		SPI_WriteByte(Sn_CR,socReg,Sn_RECV);
-		testTx(socReg);
+//		testTx(socReg);
 	}
 	
 	return;
+}
+//////////////// new methods to break into words
+uint8_t pollForNewToken(uint8_t socReg) // yes, this method is overly verbose
+{
+	uint8_t returnCode = 0;
+	uint16_t buffSize = 0;
+	buffSize = getLongReg(socReg, Sn_RX_RSR_L);
+	if (buffSize == 0)
+		returnCode = 0;
+	else
+		returnCode = 1;
+	return returnCode;
+}
+char * getNewToken(uint8_t socReg)
+{
+		char myBuffer[30]; // largest incoming string 30 chars!
+		uint16_t buffSize = getLongReg(socReg, Sn_RX_RSR_L);
+		uint16_t wr;
+		uint16_t rd = getLongReg(socReg, Sn_RX_RD_L);
+		char data;
+		if(buffSize == 0);
+		else
+		{
+			for(uint16_t i; i < buffSize; i++ )
+			{
+				data = SPI_ReadByte(rd+i,socReg + 2); // + 2 to get RXBUF
+				sendChar(data);
+			}
+			wr = getLongReg(socReg, Sn_RX_WR_L);
+			//SPI_WriteByte(Sn_RX_RD_L,socReg,wrL);
+			setLongReg(socReg, Sn_RX_RD_L, wr);
+			SPI_WriteByte(Sn_CR,socReg,Sn_RECV);
+			//		testTx(socReg);
+		}
+		
+		return;
 }
 
 char inc = '0';

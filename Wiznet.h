@@ -21,6 +21,7 @@ void writeIp(uint8_t byte0, uint8_t byte1, uint8_t byte2, uint8_t byte3, uint16_
 uint8_t pollStatus(char* statusString, uint8_t block, uint8_t testIndex, uint8_t toTest);
 void pollStatusPortAndPrint(uint8_t socReg);
 void testPoll(uint8_t socReg);
+uint8_t pollForNewToken(uint8_t socReg);
 
 #define SOC0_REG 0b00001
 #define SOC1_REG 0b00101
