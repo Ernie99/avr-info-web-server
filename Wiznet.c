@@ -15,7 +15,6 @@
 #define MOSI PINB3
 #define MISO PINB4
 #define SCK PINB5
-
 #define SPI_DDR DDRB
 
 // AVRJazz Mega168/328 SPI I/O
@@ -27,7 +26,6 @@
 #define COMMON_REG 0b00000
 #define SOC0_TXBUF 0b00010
 #define SOC0_RXBUF 0b00011
-
 
 // Wiznet W5500 Register Addresses COMMON REGISTER
 #define MR   0x0000   // Mode Register
@@ -73,13 +71,48 @@
 #define CS_ENABLE SPI_PORT&=~_BV(ETHCS)
 #define CS_DISABLE SPI_PORT|=_BV(ETHCS)
 
+// Sn_SR status codes
+const char symbol0x00[] PROGMEM = "SOCK_CLOSED";
+const char symbol0x13[] PROGMEM = "SOCK_INIT";
+const char symbol0x14[] PROGMEM = "SOCK_LISTEN";
+const char symbol0x17[] PROGMEM = "SOCK_ESTABLISHED";
+const char symbol0x1C[] PROGMEM = "SOCK_CLOSE_WAIT";
+const char symbol0x22[] PROGMEM = "SOCK_UDP";
+const char symbol0x42[] PROGMEM = "SOCK_MACRAW";
+// Sn_SR temp status codes
+const char symbol0x15[] PROGMEM = "SOCK_SYNSENT";
+const char symbol0x16[] PROGMEM = "SOCK_SYNRECV";
+const char symbol0x18[] PROGMEM = "SOCK_FIN_WAIT";
+const char symbol0x1A[] PROGMEM = "SOCK_CLOSING";
+const char symbol0x1B[] PROGMEM = "SOCK_TIME_WAIT";
+const char symbol0x1D[] PROGMEM = "SOCK_LAST_ACK";
+const char symbol0xEF[] PROGMEM = "DOH";
+const char symbol0xFF[] PROGMEM = "MESSUP";
+
+const char* const symbolPointers[] PROGMEM = {symbol0x00, symbol0x13,
+	symbol0x14, symbol0x17, symbol0x1C, symbol0x22, symbol0x42,
+	symbol0x15, symbol0x16, symbol0x18, symbol0x1A, symbol0x1B,
+symbol0x1D, symbol0xEF, symbol0xFF};
+
+uint8_t GLOBAL_STATUS_0 = 0xFF;
+
 // private methods
-void spiOneByteSend(uint8_t data);
-void spiTwoBytesSend(uint16_t data);
+void spiOneByteSend(uint8_t data); //send a byte down the bus
+void spiTwoBytesSend(uint16_t data); //send two bytes down the bus
+void SPI_WriteByte(uint16_t address, uint8_t block, uint8_t data);
+uint8_t SPI_ReadByte(uint16_t address, uint8_t block);
+uint16_t getLongReg(uint8_t socReg, uint8_t lsbAddr);
+void writeIp(uint8_t byte0, uint8_t byte1, uint8_t byte2, uint8_t byte3, uint16_t reg);
+
+void waitForEstablished(uint8_t socReg);
+
+
+uint8_t pollStatus(char* statusString, uint8_t block);
 void strobeCE(void);
+
 void printIfNewRcv(uint8_t socReg);
 void testTx(uint8_t socReg);
-uint16_t getLongReg(uint8_t socReg, uint8_t lsbAddr);
+
 void setLongReg(uint8_t socReg, uint8_t lsbAddr, uint16_t data);
 
 uint8_t blockToSocNum(uint8_t socReg);
@@ -90,16 +123,13 @@ void printNewWords(uint8_t socReg);
 uint8_t pollForNewToken(uint8_t socReg);
 char * getNewToken(uint8_t socReg, char delimiter);
 
-
-// private methods to print stuff
-//void pollPointersAndPrint(uint8_t socReg);
 void readFew(uint8_t socReg);
 
+//**PRIVATE**////////////////***spi methods***//////
 void spiOneByteSend(uint8_t data){
-//	SPI_DDR &= ~_BV(MISO);
 	SPDR = data;
 	while(!(SPSR &_BV(SPIF)));
-		;
+	;
 }
 void spiTwoBytesSend(uint16_t data){
 	uint8_t msByte = data >> 8;
@@ -107,27 +137,6 @@ void spiTwoBytesSend(uint16_t data){
 	spiOneByteSend(msByte);
 	spiOneByteSend(lsByte);
 }
-
-//public methods
-void wiznetSpiInit(void)
-{
-	//set I/O directions for SPI pins
-	SPI_DDR |= _BV(ETHCS);
-	SPI_DDR |= _BV(MOSI);
-	SPI_DDR |= _BV(SCK);
-	SPI_DDR &= ~_BV(MISO);
-	
-	CS_DISABLE;
-	
-	// Enable SPI master mode
-	SPCR |= _BV(SPE) | _BV(MSTR);
-	// set SPI clock to FCPU / 128
-	SPCR |= _BV(SPR1) | _BV(SPR0);
-	
-//	SPI_PORT |= _BV(ETHCS);
-	
-}
-
 void SPI_WriteByte(uint16_t address, uint8_t block, uint8_t data){
 	block = block << 3;
 	block |= _BV(2); // enable write
@@ -138,7 +147,6 @@ void SPI_WriteByte(uint16_t address, uint8_t block, uint8_t data){
 	spiOneByteSend(data);
 	CS_DISABLE;
 }
-
 uint8_t SPI_ReadByte(uint16_t address, uint8_t block){
 	block = block << 3;
 	// read enabled
@@ -150,38 +158,47 @@ uint8_t SPI_ReadByte(uint16_t address, uint8_t block){
 	CS_DISABLE;
 	return(SPDR);
 }
-
-void W5500_Test(void)
+uint16_t getLongReg(uint8_t socReg, uint8_t lsbAddr)
 {
-//	sendString("old data is \n");
-//	readWnetAndPrintSettings();
-	W5500_Init();
-	sendString("new data is \n");
-	readWnetAndPrintSettings();
-	W5500_Init_Soc(SOC0_REG);
-	W5500_Init_Soc(SOC1_REG);
-	uint8_t codeSoc0 = 0;
-	uint8_t codeSoc1 = 0;
-	char blank0[] = "123456789ABCDEEF";
-	char blank1[] = "123456789ABCDEEF";
-	while(1){
-
-//		sendString("hihi");
-		printNewWords(SOC0_REG);
-	}
+	uint16_t buffSizeL = SPI_ReadByte(lsbAddr,socReg);
+	uint16_t buffSizeH = SPI_ReadByte(lsbAddr - 1, socReg);
+	buffSizeH = buffSizeH << 8;
+	return(buffSizeH + buffSizeL);
+}
+setLongReg(uint8_t socReg, uint8_t lsbAddr, uint16_t data)
+{
+	uint16_t lsb = data;
+	uint16_t msb = data;
+	lsb = lsb & 0x00FF;
+	msb = msb >> 8;
+	SPI_WriteByte(lsbAddr,socReg,lsb);
+	SPI_WriteByte(lsbAddr - 1,socReg,msb);
 }
 
+////**mehtods to init stuff ***////////////////
+void wiznetSpiInit(void)
+{
+	//set I/O directions for SPI pins
+	SPI_DDR |= _BV(ETHCS);
+	SPI_DDR |= _BV(MOSI);
+	SPI_DDR |= _BV(SCK);
+	SPI_DDR &= ~_BV(MISO);
+	
+	CS_DISABLE;
+	// Enable SPI master mode
+	SPCR |= _BV(SPE) | _BV(MSTR);
+	// set SPI clock to FCPU / 128
+	SPCR |= _BV(SPR1) | _BV(SPR0);
+	return;
+}
 void W5500_Init(void) // Write IP address, etc
-{	
+{
 	CS_ENABLE;
 	writeIp(10, 0, 1, 1, GAR);
 	writeIp(255, 255, 255, 0, SUBR);
 	writeIp(10, 0, 1, 55, SIPR);
 	CS_DISABLE;
-
-
 }
-
 void W5500_Init_Soc(uint8_t socReg){
 	//pollStatusPortAndPrint(socReg);
 	SPI_WriteByte(Sn_MR,socReg,Sn_MR_TCP); // set to TCP mode
@@ -192,18 +209,16 @@ void W5500_Init_Soc(uint8_t socReg){
 	//pollStatusPortAndPrint(socReg);
 	SPI_WriteByte(Sn_CR,socReg, Sn_CR_LISTEN);
 }
-
-void strobeCE(void){
-	CS_ENABLE;
-	_delay_us(1);
-	CS_DISABLE;
+void writeIp(uint8_t byte0, uint8_t byte1, uint8_t byte2, uint8_t byte3, uint16_t reg)
+{
+	SPI_WriteByte(reg, 0, byte0);
+	SPI_WriteByte(reg+1, 0, byte1);
+	SPI_WriteByte(reg+2, 0, byte2);
+	SPI_WriteByte(reg+3, 0, byte3);
 }
 
+/////***methods to print stuff ***///////////////
 void readWnetAndPrintSettings(void){
-//	strobeCE();
-//	_delay_us(1);
-//	CS_ENABLE;
-//	_delay_us(1);
 	uint8_t gar0 =SPI_ReadByte(GAR,0);
 	uint8_t gar1 =SPI_ReadByte(GAR+1,0);
 	uint8_t gar2 =SPI_ReadByte(GAR+2,0);
@@ -222,8 +237,6 @@ void readWnetAndPrintSettings(void){
 	uint8_t sipr1 =SPI_ReadByte(SIPR+1,0);
 	uint8_t sipr2 =SPI_ReadByte(SIPR+2,0);
 	uint8_t sipr3 =SPI_ReadByte(SIPR+3,0);
-//	_delay_us(1);
-//	CS_DISABLE;
 	sendString("Gateway Address: ");
 	printOctetDec(gar0); sendChar('.');
 	printOctetDec(gar1); sendChar('.');
@@ -247,48 +260,11 @@ void readWnetAndPrintSettings(void){
 	printOctetDec(sipr2); sendChar('.');
 	printOctetDec(sipr3); sendChar('\n');
 }
-
-void writeIp(uint8_t byte0, uint8_t byte1, uint8_t byte2, uint8_t byte3, uint16_t reg)
-{
-	SPI_WriteByte(reg, 0, byte0);
-	SPI_WriteByte(reg+1, 0, byte1);
-	SPI_WriteByte(reg+2, 0, byte2);
-	SPI_WriteByte(reg+3, 0, byte3);
-}
-
-// Sn_SR status codes
-const char symbol0x00[] PROGMEM = "SOCK_CLOSED";
-const char symbol0x13[] PROGMEM = "SOCK_INIT";
-const char symbol0x14[] PROGMEM = "SOCK_LISTEN";
-const char symbol0x17[] PROGMEM = "SOCK_ESTABLISHED";
-const char symbol0x1C[] PROGMEM = "SOCK_CLOSE_WAIT";
-const char symbol0x22[] PROGMEM = "SOCK_UDP";
-const char symbol0x42[] PROGMEM = "SOCK_MACRAW";
-// Sn_SR temp status codes
-const char symbol0x15[] PROGMEM = "SOCK_SYNSENT";
-const char symbol0x16[] PROGMEM = "SOCK_SYNRECV";
-const char symbol0x18[] PROGMEM = "SOCK_FIN_WAIT";
-const char symbol0x1A[] PROGMEM = "SOCK_CLOSING";
-const char symbol0x1B[] PROGMEM = "SOCK_TIME_WAIT";
-const char symbol0x1D[] PROGMEM = "SOCK_LAST_ACK";
-const char symbol0xEF[] PROGMEM = "DIPSHIT";
-const char symbol0xFF[] PROGMEM = "FUCKEDITUP";
-
-const char* const symbolPointers[] PROGMEM = {symbol0x00, symbol0x13,
-	symbol0x14, symbol0x17, symbol0x1C, symbol0x22, symbol0x42,
-	symbol0x15, symbol0x16, symbol0x18, symbol0x1A, symbol0x1B,
-	symbol0x1D, symbol0xEF, symbol0xFF};
-
-
-uint8_t pollStatus(char* statusString, uint8_t block, uint8_t testIndex, uint8_t toTest){
+uint8_t pollStatus(char* statusString, uint8_t block){
 	uint8_t code;
-	if (toTest)
-		code = testIndex;
-	else{
-		CS_ENABLE;
-		code = SPI_ReadByte(Sn_SR, block);
-		CS_DISABLE;
-	}
+	CS_ENABLE;
+	code = SPI_ReadByte(Sn_SR, block);
+	CS_DISABLE;
 	uint8_t index = 14; // last
 	
 	switch (code) {
@@ -308,45 +284,15 @@ uint8_t pollStatus(char* statusString, uint8_t block, uint8_t testIndex, uint8_t
 		default: index = 13; break;
 	}
 	strcpy_PF(statusString, pgm_read_word(&symbolPointers[index]));
-	return 0;
-	
+	return code;	
 }
-
 void pollStatusPortAndPrint(uint8_t socReg){
 	char blank[] = "123456789ABCDEEF";
-	pollStatus(blank,socReg,0,0);
+	pollStatus(blank,socReg);
 	sendString("\n");
 	sendString(blank);
-//	sendString("\n");
+	//	sendString("\n");
 }
-
-void testPoll(uint8_t socReg){
-	sendString("\n test SR codes \n");
-	char blank[] = "123456789ABCDEEF";
-	uint8_t codes[] = {0x00, 0x13, 0x14, 0x17, 0x1C, 0x22, 0x42, 0x15, 0x16, 0x18, 0x1A, 0x1B, 0x1D};
-	uint8_t length = 13;
-	for (uint8_t i = 0; i < length ; i++ ){
-		pollStatus(blank, 0, codes[i], 1);
-		sendString(blank);
-		sendString("\n");
-	}
-	sendString("\n done test SR codes \n");
-	W5500_Init_Soc(socReg);
-	uint8_t realCode = 0;
-	while(1){
-		_delay_ms(2000);
-		sendString("\n real code \n");
-		realCode = pollStatus(blank,socReg,0,0);
-		pollPointersPortAndPrint(socReg);
-		sendString(blank);
-		readFew(socReg);
-	}
-}
-
-// private utility methods
-
-
-// debug printing methods
 void pollPointersPortAndPrint(uint8_t socReg){
 	uint8_t data;
 	uint8_t soc = blockToSocNum(socReg);
@@ -371,17 +317,22 @@ void pollPointersPortAndPrint(uint8_t socReg){
 		sendString(" ");
 	}
 }
-
 void readFew(uint8_t socReg){
 	char data;
 	sendChar('\n');
 	for(uint8_t i; i < 20; i++ ){
 		data = SPI_ReadByte(i,socReg + 2); // + 2 to get RXBUF
-		sendChar(data);	
+		sendChar(data);
 	}
 	sendChar('\n');
-}
+} // debug only
 
+///***little helper methods**//////////////
+void strobeCE(void){
+	CS_ENABLE;
+	_delay_us(1);
+	CS_DISABLE;
+}
 uint8_t blockToSocNum(uint8_t socReg){
 	uint8_t port = 9; // also the error code
 	switch (socReg)
@@ -398,6 +349,26 @@ uint8_t blockToSocNum(uint8_t socReg){
 	}
 	return port;
 }
+void W5500_Test(void)
+{
+//	sendString("old data is \n");
+//	readWnetAndPrintSettings();
+	W5500_Init();
+	sendString("new data is \n");
+	readWnetAndPrintSettings();
+	W5500_Init_Soc(SOC0_REG);
+	W5500_Init_Soc(SOC1_REG);
+	uint8_t codeSoc0 = 0;
+	uint8_t codeSoc1 = 0;
+	char blank0[] = "123456789ABCDEEF";
+	char blank1[] = "123456789ABCDEEF";
+	while(1){
+
+//		sendString("hihi");
+		printNewWords(SOC0_REG);
+	}
+}
+
 
 printIfNewRcv(uint8_t socReg){
 	uint16_t buffSize = getLongReg(socReg, Sn_RX_RSR_L);
@@ -443,14 +414,6 @@ void printNewWords(uint8_t socReg){
 	return;
 }
 
-uint8_t scanForString(char * string, uint8_t maxLength, uint8_t socReg) // blocking
-{
-	while(1)
-	{
-		while(pollForNewToken(socReg)){
-		}
-	}
-}
 
 //////////////// new methods to break into words
 uint8_t pollForNewToken(uint8_t socReg) // yes, this method is overly verbose
@@ -461,11 +424,6 @@ uint8_t pollForNewToken(uint8_t socReg) // yes, this method is overly verbose
 	else
 		return 1;
 }
-
-uint16_t globalRSR = 0;
-uint16_t globalRxWr;
-uint16_t globalRxRd;
-uint16_t globalLastRd;
 
 char * getNewToken(uint8_t socReg, char delimiter) // reads wiznet buffer only to next delimiter
 {
@@ -485,6 +443,7 @@ char * getNewToken(uint8_t socReg, char delimiter) // reads wiznet buffer only t
 		arrayIndex++;
 		count++;
 	}
+	sendString("HIT");
 //	arrayIndex++;
 	myBuffer[arrayIndex] = '\0';
 	setLongReg(socReg, Sn_RX_RD_L, rdPtr + count);
@@ -504,23 +463,22 @@ char * getNewToken(uint8_t socReg, char delimiter) // reads wiznet buffer only t
 		//		testTx(socReg);
 		globalBuffSize = 0;
 	}*/
-	
+	//sendString("HIT");
 	return myBuffer;
 }
 
 
 //////////////////////////////////////////////////////////// end new methods //////////////////////////////////
-char inc = '0';
-testTx(uint8_t socReg){
+
+testTx(uint8_t socReg, uint8_t prevState){
 	// Read the Tx Write Pointer
 	uint16_t wr = getLongReg(socReg, Sn_TX_WR_L);
 	SPI_WriteByte(wr+0, socReg + 1, 'H');
 	SPI_WriteByte(wr+1, socReg + 1, 'e');
-	SPI_WriteByte(wr+2, socReg + 1, inc);
+	SPI_WriteByte(wr+2, socReg + 1, 'l');
 	SPI_WriteByte(wr+3, socReg + 1, 'o');
 	setLongReg(socReg,Sn_TX_WR_L,wr + 4);
 	SPI_WriteByte(Sn_CR,socReg,Sn_SEND);
-	inc++;
 //	for(uint8_t i; i < 5; i++)
 //	{
 //		SPI_WriteByte(wrL)
@@ -529,21 +487,38 @@ testTx(uint8_t socReg){
 	
 }
 
-// methods for low level data access
-uint16_t getLongReg(uint8_t socReg, uint8_t lsbAddr)
+waitForEstablished(uint8_t socReg) // blocking
 {
-	uint16_t buffSizeL = SPI_ReadByte(lsbAddr,socReg);
-	uint16_t buffSizeH = SPI_ReadByte(lsbAddr - 1, socReg);
-	buffSizeH = buffSizeH << 8;
-	return(buffSizeH + buffSizeL);
+	char blank[] = "123456789ABCDEEF";
+	uint8_t code;
+	uint8_t ps = 0xFF;
+	while (1)
+	{
+		
+		code = pollStatus(blank,socReg);
+		if(code != ps)
+		{
+			ps = code;
+			sendString("\n");
+			sendString(blank);
+		}
+		if(code == 0x17) //SOCK_ESTABLISHED
+			return;		
+	}
+	return;
 }
 
-setLongReg(uint8_t socReg, uint8_t lsbAddr, uint16_t data)
+void mainWiznet()
 {
-	uint16_t lsb = data;
-	uint16_t msb = data;
-	lsb = lsb & 0x00FF;
-	msb = msb >> 8;
-	SPI_WriteByte(lsbAddr,socReg,lsb);
-	SPI_WriteByte(lsbAddr - 1,socReg,msb);	
+	uint8_t initState = 0xFF;
+	_delay_ms(500);
+	wiznetSpiInit();
+	_delay_ms(500);
+	sendString("bla");
+	W5500_Init();
+	readWnetAndPrintSettings();
+	W5500_Init_Soc(SOC0_REG);
+	waitForEstablished(SOC0_REG);
+	sendString("here we go");
+	return;
 }

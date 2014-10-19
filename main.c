@@ -10,6 +10,7 @@
 #include "I2c.h"
 #include "RtcStrings.h"
 #include "Wiznet.h"
+#include "SimpleServer.h"
 
 #define SLAVE_ADDRESS_W 0b11010000
 #define SLAVE_ADDRESS_R 0b11010001
@@ -21,28 +22,9 @@ void setTimeDayDate(uint8_t second, uint8_t minute, uint8_t hour, uint8_t day,
 int main(void)
 {
 	uartInit();
-	_delay_ms(500);
-//	twiInit();
-	wiznetSpiInit();
-	_delay_ms(500);
-	sendString("bla");
-//	ansiPlain();
-//	ansiClear();
-	W5500_Test();
-//	testPoll(SOC0_REG);
-	
-	//setTimeDayDate(0, 54, 11, 4, 19, 3, 14);
-//	W5100_Init();
-	
+	startSimpleWebServer(SOC0_REG);	
     while(1)
-    {
-		
-//		_delay_ms(1000);
-//		printTimeDayDate();
-//		W5100_test();
-//strobeCE();
-		
-		
+    {		
     }
 }
 

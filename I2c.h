@@ -6,6 +6,8 @@
 #ifndef I2C_H_
 #define I2C_H_
 
+#include <stdint.h>
+
 /** @brief Write 8 bit address then immediately read an arbitrary number of bytes
  *  @param slaveAddressW i2c write address, lsb is low
  *  @param slaveAddressR i2c read address, lsb is high
