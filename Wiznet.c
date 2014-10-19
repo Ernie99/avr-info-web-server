@@ -94,38 +94,34 @@ const char* const symbolPointers[] PROGMEM = {symbol0x00, symbol0x13,
 	symbol0x15, symbol0x16, symbol0x18, symbol0x1A, symbol0x1B,
 symbol0x1D, symbol0xEF, symbol0xFF};
 
-uint8_t GLOBAL_STATUS_0 = 0xFF;
 
-// private methods
-void spiOneByteSend(uint8_t data); //send a byte down the bus
-void spiTwoBytesSend(uint16_t data); //send two bytes down the bus
+/**************************************
+*         PRIVATE PROTOTYPES          *
+***************************************/
+void spiOneByteSend(uint8_t data);
+void spiTwoBytesSend(uint16_t data);
 void SPI_WriteByte(uint16_t address, uint8_t block, uint8_t data);
 uint8_t SPI_ReadByte(uint16_t address, uint8_t block);
 uint16_t getLongReg(uint8_t socReg, uint8_t lsbAddr);
 void writeIp(uint8_t byte0, uint8_t byte1, uint8_t byte2, uint8_t byte3, uint16_t reg);
-
-void waitForEstablished(uint8_t socReg);
-
-
+//
+void wiznetSpiInit(void);
+void W5500_Init(void); // Write IP address, etc
+void W5500_Init_Soc(uint8_t socReg);
+//
+void readWnetAndPrintSettings(void);
 uint8_t pollStatus(char* statusString, uint8_t block);
+void pollStatusPortAndPrint(uint8_t socReg);
+void pollPointersPortAndPrint(uint8_t socReg);
+//
 void strobeCE(void);
-
-void printIfNewRcv(uint8_t socReg);
-void testTx(uint8_t socReg);
-
-void setLongReg(uint8_t socReg, uint8_t lsbAddr, uint16_t data);
-
 uint8_t blockToSocNum(uint8_t socReg);
+void writeIp(uint8_t byte0, uint8_t byte1, uint8_t byte2, uint8_t byte3, uint16_t reg);
 
-// new private methods
-uint8_t scanForString(char * string, uint8_t maxLength, uint8_t socReg);
-void printNewWords(uint8_t socReg);
-uint8_t pollForNewToken(uint8_t socReg);
-
-
-void readFew(uint8_t socReg);
-
-//**PRIVATE**////////////////***spi methods***//////
+/**************************************
+*            FUNCTIONS                *
+***************************************/
+//***spi functions***//////
 void spiOneByteSend(uint8_t data){
 	SPDR = data;
 	while(!(SPSR &_BV(SPIF)));
@@ -175,7 +171,7 @@ setLongReg(uint8_t socReg, uint8_t lsbAddr, uint16_t data)
 	SPI_WriteByte(lsbAddr - 1,socReg,msb);
 }
 
-////**mehtods to init stuff ***////////////////
+////**functions to init stuff ***////////////////
 void wiznetSpiInit(void)
 {
 	//set I/O directions for SPI pins
@@ -209,15 +205,19 @@ void W5500_Init_Soc(uint8_t socReg){
 	//pollStatusPortAndPrint(socReg);
 	SPI_WriteByte(Sn_CR,socReg, Sn_CR_LISTEN);
 }
-void writeIp(uint8_t byte0, uint8_t byte1, uint8_t byte2, uint8_t byte3, uint16_t reg)
+void wiznetInitAll()
 {
-	SPI_WriteByte(reg, 0, byte0);
-	SPI_WriteByte(reg+1, 0, byte1);
-	SPI_WriteByte(reg+2, 0, byte2);
-	SPI_WriteByte(reg+3, 0, byte3);
+	_delay_ms(500);
+	wiznetSpiInit();
+	_delay_ms(500);
+	sendString("bla");
+	W5500_Init();
+	readWnetAndPrintSettings();
+	W5500_Init_Soc(SOC0_REG);
 }
 
-/////***methods to print stuff ***///////////////
+
+/////***functions to print stuff ***///////////////
 void readWnetAndPrintSettings(void){
 	uint8_t gar0 =SPI_ReadByte(GAR,0);
 	uint8_t gar1 =SPI_ReadByte(GAR+1,0);
@@ -317,17 +317,8 @@ void pollPointersPortAndPrint(uint8_t socReg){
 		sendString(" ");
 	}
 }
-void readFew(uint8_t socReg){
-	char data;
-	sendChar('\n');
-	for(uint8_t i; i < 20; i++ ){
-		data = SPI_ReadByte(i,socReg + 2); // + 2 to get RXBUF
-		sendChar(data);
-	}
-	sendChar('\n');
-} // debug only
 
-///***little helper methods**//////////////
+///*** helper functions**//////////////
 void strobeCE(void){
 	CS_ENABLE;
 	_delay_us(1);
@@ -349,82 +340,35 @@ uint8_t blockToSocNum(uint8_t socReg){
 	}
 	return port;
 }
-void W5500_Test(void)
+void writeIp(uint8_t byte0, uint8_t byte1, uint8_t byte2, uint8_t byte3, uint16_t reg)
 {
-//	sendString("old data is \n");
-//	readWnetAndPrintSettings();
-	W5500_Init();
-	sendString("new data is \n");
-	readWnetAndPrintSettings();
-	W5500_Init_Soc(SOC0_REG);
-	W5500_Init_Soc(SOC1_REG);
-	uint8_t codeSoc0 = 0;
-	uint8_t codeSoc1 = 0;
-	char blank0[] = "123456789ABCDEEF";
-	char blank1[] = "123456789ABCDEEF";
-	while(1){
-
-//		sendString("hihi");
-		printNewWords(SOC0_REG);
-	}
+	SPI_WriteByte(reg, 0, byte0);
+	SPI_WriteByte(reg+1, 0, byte1);
+	SPI_WriteByte(reg+2, 0, byte2);
+	SPI_WriteByte(reg+3, 0, byte3);
 }
 
-
-printIfNewRcv(uint8_t socReg){
-	uint16_t buffSize = getLongReg(socReg, Sn_RX_RSR_L);
-	uint16_t wr;
-	uint16_t rd = getLongReg(socReg, Sn_RX_RD_L);
-	char data;
-	if(buffSize == 0);
-	else
+///***blocking functions for polling//////
+waitForEstablished(uint8_t socReg) // blocking
+{
+	char blank[] = "123456789ABCDEEF";
+	uint8_t code;
+	uint8_t ps = 0xFF;
+	while (1)
 	{
-		for(uint16_t i; i < buffSize; i++ )
+		
+		code = pollStatus(blank,socReg);
+		if(code != ps)
 		{
-			data = SPI_ReadByte(rd+i,socReg + 2); // + 2 to get RXBUF
-			sendChar(data);
+			ps = code;
+			sendString("\n");
+			sendString(blank);
 		}
-		wr = getLongReg(socReg, Sn_RX_WR_L);
-		//SPI_WriteByte(Sn_RX_RD_L,socReg,wrL);
-		setLongReg(socReg, Sn_RX_RD_L, wr);
-		SPI_WriteByte(Sn_CR,socReg,Sn_RECV);
-		testTx(socReg);
-	}
-	
-	return;
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////// begin new methods ////////////////////////////
-void printNewWords(uint8_t socReg){
-	char * mPtr;
-	if(pollForNewToken(socReg)==0)
-	{
-		pollPointersPortAndPrint(socReg);
-		sendString("\n no data yet");
-		_delay_ms(5000);
-	}
-	else
-	{	
-//		sendString("\n some new stuff");
-		sendString("\n");
-		pollPointersPortAndPrint(socReg);
-		sendString("\n");
-		//mPtr = getNewToken(socReg, ','); //good!
-//		sendString("\n some new stuff");
-			sendString(mPtr);
+		if(code == 0x17) //SOCK_ESTABLISHED
+		return;
 	}
 	return;
 }
-
-
-//////////////// new methods to break into words
-uint8_t pollForNewToken(uint8_t socReg) // yes, this method is overly verbose
-{
-	uint16_t buffSize = getLongReg(socReg, Sn_RX_RSR_L);
-	if (buffSize == 0)
-		return 0;
-	else
-		return 1;
-}
-
 char * getNewToken(uint8_t socReg, char delimiter, char * myBuffer) // reads wiznet buffer only to next delimiter
 {
 	uint16_t counts = 0;
@@ -443,15 +387,11 @@ char * getNewToken(uint8_t socReg, char delimiter, char * myBuffer) // reads wiz
 		if (RSR == 0) // just started
 		{
 			_delay_ms(100);
-//			sendString(" noDat ");
 		}
 		else if(counts<RSR) // is there another char in the buffer?
 		{
 			data = SPI_ReadByte(myRdPtr,socReg + 2); // + 2 to get RXBUF
 			myBuffer[index] = data;
-//			sendString(" plug ");
-//			sendChar(data);
-//			sendString(" chug ");
 			myRdPtr++;
 			counts++;
 			index++;
@@ -459,21 +399,16 @@ char * getNewToken(uint8_t socReg, char delimiter, char * myBuffer) // reads wiz
 		else// wait for new incoming data
 		{
 			_delay_ms(100);
-//			sendString(" bigWait ");
-//			sendString(" waiting ");
 		}
 	}
-//	sendString(" ACORE ");
-	index--; //to write ove the delimiter
+	index--; //to write ove the delimitr
 	myBuffer[index] = '\0';
 	setLongReg(socReg, Sn_RX_RD_L, myRdPtr);
 	SPI_WriteByte(Sn_CR,socReg,Sn_RECV);
 	return myBuffer;
 }
 
-
-//////////////////////////////////////////////////////////// end new methods //////////////////////////////////
-
+//**test function**//
 testTx(uint8_t socReg, uint8_t prevState){
 	// Read the Tx Write Pointer
 	uint16_t wr = getLongReg(socReg, Sn_TX_WR_L);
@@ -491,27 +426,7 @@ testTx(uint8_t socReg, uint8_t prevState){
 	
 }
 
-waitForEstablished(uint8_t socReg) // blocking
-{
-	char blank[] = "123456789ABCDEEF";
-	uint8_t code;
-	uint8_t ps = 0xFF;
-	while (1)
-	{
-		
-		code = pollStatus(blank,socReg);
-		if(code != ps)
-		{
-			ps = code;
-			sendString("\n");
-			sendString(blank);
-		}
-		if(code == 0x17) //SOCK_ESTABLISHED
-			return;		
-	}
-	return;
-}
-
+//**main function used for testing only**//
 void mainWiznet()
 {
 	uint8_t initState = 0xFF;

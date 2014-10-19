@@ -10,12 +10,15 @@
 
 #include <stdint.h>
 
-
-void W5500_Test(void);
 void readWnetAndPrintSettings(void);
-void mainWiznet(void);
-//void pollStatusPortAndPrint(uint8_t socReg);
+
+// blocking methods
+void waitForEstablished(uint8_t socReg);
 char * getNewToken(uint8_t socReg, char delimiter, char * myBuff);
+// init function
+void wiznetInitAll(void);
+// test method
+void mainWiznet(void);
 
 
 #define SOC0_REG 0b00001
