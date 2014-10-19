@@ -121,7 +121,7 @@ uint8_t blockToSocNum(uint8_t socReg);
 uint8_t scanForString(char * string, uint8_t maxLength, uint8_t socReg);
 void printNewWords(uint8_t socReg);
 uint8_t pollForNewToken(uint8_t socReg);
-char * getNewToken(uint8_t socReg, char delimiter);
+
 
 void readFew(uint8_t socReg);
 
@@ -407,7 +407,7 @@ void printNewWords(uint8_t socReg){
 		sendString("\n");
 		pollPointersPortAndPrint(socReg);
 		sendString("\n");
-		mPtr = getNewToken(socReg, ',');
+		//mPtr = getNewToken(socReg, ','); //good!
 //		sendString("\n some new stuff");
 			sendString(mPtr);
 	}
@@ -425,45 +425,49 @@ uint8_t pollForNewToken(uint8_t socReg) // yes, this method is overly verbose
 		return 1;
 }
 
-char * getNewToken(uint8_t socReg, char delimiter) // reads wiznet buffer only to next delimiter
+char * getNewToken(uint8_t socReg, char delimiter, char * myBuffer) // reads wiznet buffer only to next delimiter
 {
-	char myBuffer[30]; // largest incoming string 30 chars!
+	//char myBuffer[30]; // largest incoming string 30 chars!
 	uint16_t RSR = getLongReg(socReg, Sn_RX_RSR_L);
 	uint16_t count = 0;
 	uint16_t rdPtr = getLongReg(socReg, Sn_RX_RD_L);
 	uint16_t wrPtr = getLongReg(socReg, Sn_RX_WR_L);
 	
-	char data;
+	char data = 0xFF;
 	uint8_t arrayIndex = 0;
 	
-	while((data!=delimiter)&&(count < RSR))
+	uint16_t newRSR = RSR;
+	
+	uint16_t rsrDiff;
+	while(data!=delimiter)
 	{
-		data = SPI_ReadByte(count+rdPtr,socReg + 2); // + 2 to get RXBUF
-		myBuffer[arrayIndex] = data;
-		arrayIndex++;
-		count++;
-	}
-	sendString("HIT");
-//	arrayIndex++;
-	myBuffer[arrayIndex] = '\0';
-	setLongReg(socReg, Sn_RX_RD_L, rdPtr + count);
-	SPI_WriteByte(Sn_CR,socReg,Sn_RECV);
-/*	
-	if(globalBuffSize == globalLastRd) // we reached the end
-	{
-		myBuffer[0] = 'E';
-		myBuffer[1] = 'N';
-		myBuffer[2] = 'D';
-		myBuffer[3] = '\0';
+		newRSR = getLongReg(socReg, Sn_RX_RSR_L);
+		rsrDiff = newRSR-RSR;
+		RSR = newRSR;
 		
-		uint16_t wr = getLongReg(socReg, Sn_RX_WR_L);
-		//SPI_WriteByte(Sn_RX_RD_L,socReg,wrL);
-		setLongReg(socReg, Sn_RX_RD_L, wr);
-		SPI_WriteByte(Sn_CR,socReg,Sn_RECV);
-		//		testTx(socReg);
-		globalBuffSize = 0;
-	}*/
-	//sendString("HIT");
+		while(rsrDiff)
+		{
+			data = SPI_ReadByte(count+rdPtr,socReg + 2); // + 2 to get RXBUF
+			count++;
+			rsrDiff--;
+			if(data == delimiter){
+				rsrDiff = 0;
+				myBuffer[arrayIndex] = '\0';
+				setLongReg(socReg, Sn_RX_RD_L, rdPtr + count);
+				SPI_WriteByte(Sn_CR,socReg,Sn_RECV);
+			}
+			else{
+				myBuffer[arrayIndex] = data;
+			//	sendString("wow");
+				arrayIndex++;
+			}	
+		}
+		_delay_ms(100);	
+	}
+//	arrayIndex++;
+//	myBuffer[arrayIndex] = '\0';
+	
+
 	return myBuffer;
 }
 

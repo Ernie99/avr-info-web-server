@@ -22,12 +22,12 @@ void startSimpleWebServer(uint8_t socReg){
 	W5500_Init_Soc(socReg);
 	waitForEstablished(socReg);
 ///////////now start the real stuff
-	char * buf;
-//	while(1)
-//	{
-		buf = getNewToken(socReg, 'z');
-		sendString(buf);
-//	}
+	char yay[100];
+	while(1)
+	{
+		getNewToken(socReg, ',', yay);
+		sendString(yay);
+	}
 	
 	
 	return;

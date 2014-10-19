@@ -15,6 +15,7 @@ void W5500_Test(void);
 void readWnetAndPrintSettings(void);
 void mainWiznet(void);
 //void pollStatusPortAndPrint(uint8_t socReg);
+char * getNewToken(uint8_t socReg, char delimiter, char * myBuff);
 
 
 #define SOC0_REG 0b00001
