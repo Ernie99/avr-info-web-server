@@ -25,10 +25,9 @@ void startSimpleWebServer(uint8_t socReg){
 	char yay[100];
 	while(1)
 	{
-		getNewToken(socReg, ',', yay);
+		getNewToken(socReg, ' ', yay);
 		sendString(yay);
 	}
-	
 	
 	return;
 }

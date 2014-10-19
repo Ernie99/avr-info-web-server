@@ -427,47 +427,47 @@ uint8_t pollForNewToken(uint8_t socReg) // yes, this method is overly verbose
 
 char * getNewToken(uint8_t socReg, char delimiter, char * myBuffer) // reads wiznet buffer only to next delimiter
 {
-	//char myBuffer[30]; // largest incoming string 30 chars!
-	uint16_t RSR = getLongReg(socReg, Sn_RX_RSR_L);
-	uint16_t count = 0;
-	uint16_t rdPtr = getLongReg(socReg, Sn_RX_RD_L);
-	uint16_t wrPtr = getLongReg(socReg, Sn_RX_WR_L);
-	
+	uint16_t counts = 0;
+	uint8_t index = 0;
+	uint16_t RSR = 0;
+	uint16_t rdPtr;
+	uint16_t myRdPtr;
 	char data = 0xFF;
-	uint8_t arrayIndex = 0;
-	
-	uint16_t newRSR = RSR;
-	
-	uint16_t rsrDiff;
+	//RSR = getLongReg(socReg, Sn_RX_RSR_L);
+	rdPtr = getLongReg(socReg, Sn_RX_RD_L);
+	myRdPtr = rdPtr;
 	while(data!=delimiter)
-	{
-		newRSR = getLongReg(socReg, Sn_RX_RSR_L);
-		rsrDiff = newRSR-RSR;
-		RSR = newRSR;
+	{	
 		
-		while(rsrDiff)
+		RSR = getLongReg(socReg, Sn_RX_RSR_L);
+		if (RSR == 0) // just started
 		{
-			data = SPI_ReadByte(count+rdPtr,socReg + 2); // + 2 to get RXBUF
-			count++;
-			rsrDiff--;
-			if(data == delimiter){
-				rsrDiff = 0;
-				myBuffer[arrayIndex] = '\0';
-				setLongReg(socReg, Sn_RX_RD_L, rdPtr + count);
-				SPI_WriteByte(Sn_CR,socReg,Sn_RECV);
-			}
-			else{
-				myBuffer[arrayIndex] = data;
-			//	sendString("wow");
-				arrayIndex++;
-			}	
+			_delay_ms(100);
+//			sendString(" noDat ");
 		}
-		_delay_ms(100);	
+		else if(counts<RSR) // is there another char in the buffer?
+		{
+			data = SPI_ReadByte(myRdPtr,socReg + 2); // + 2 to get RXBUF
+			myBuffer[index] = data;
+//			sendString(" plug ");
+//			sendChar(data);
+//			sendString(" chug ");
+			myRdPtr++;
+			counts++;
+			index++;
+		}
+		else// wait for new incoming data
+		{
+			_delay_ms(100);
+//			sendString(" bigWait ");
+//			sendString(" waiting ");
+		}
 	}
-//	arrayIndex++;
-//	myBuffer[arrayIndex] = '\0';
-	
-
+//	sendString(" ACORE ");
+	index--; //to write ove the delimiter
+	myBuffer[index] = '\0';
+	setLongReg(socReg, Sn_RX_RD_L, myRdPtr);
+	SPI_WriteByte(Sn_CR,socReg,Sn_RECV);
 	return myBuffer;
 }
 
