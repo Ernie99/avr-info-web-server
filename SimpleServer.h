@@ -13,7 +13,7 @@
 #include <stdint.h>
 
 
-
+void testHasString(void);
 
 
 #endif /* SIMPLESERVER_H_ */

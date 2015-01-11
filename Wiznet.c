@@ -318,6 +318,7 @@ void pollPointersPortAndPrint(uint8_t socReg){
 	}
 }
 
+
 ///*** helper functions**//////////////
 void strobeCE(void){
 	CS_ENABLE;
@@ -363,9 +364,13 @@ waitForEstablished(uint8_t socReg) // blocking
 			ps = code;
 			sendString("\n");
 			sendString(blank);
+			sendString("\n");
 		}
 		if(code == 0x17) //SOCK_ESTABLISHED
-		return;
+		{
+			sendString("\n");
+			return;
+		}
 	}
 	return;
 }
@@ -408,6 +413,62 @@ char * getNewToken(uint8_t socReg, char delimiter, char * myBuffer) // reads wiz
 	return myBuffer;
 }
 
+char * getNewTokenCrLf(uint8_t socReg, char * myBuffer) // reads wiznet buffer only to next CrLf
+{
+	uint16_t counts = 0;
+	uint8_t index = 0;
+	uint16_t RSR = 0;
+	uint16_t rdPtr;
+	uint16_t myRdPtr;
+	char data = 0x00;
+	//char delimiter = '\r';
+	char delimiter = 0xFF;
+	//RSR = getLongReg(socReg, Sn_RX_RSR_L);
+	rdPtr = getLongReg(socReg, Sn_RX_RD_L);
+	myRdPtr = rdPtr;
+	while((data!=delimiter))
+	{
+		
+		RSR = getLongReg(socReg, Sn_RX_RSR_L);
+		if (RSR == 0) // just started
+		{
+			_delay_ms(100);
+		}
+		else if(counts<RSR) // is there another char in the buffer?
+		{
+			data = SPI_ReadByte(myRdPtr,socReg + 2); // + 2 to get RXBUF
+			myBuffer[index] = data;
+			myRdPtr++;
+			counts++;
+			index++;
+			if(data == '\r') // ugh, nested too much
+				delimiter = '\n';
+			else if(data == '\n')
+				delimiter = '\n';
+			else
+				delimiter = 0xFF;
+			
+		}
+		else// wait for new incoming data
+		{
+			_delay_ms(100);
+		}
+		//delimiter = '\r'; // reset search if we do on first try
+//		if(data == '\r') // see if we hit a newline
+//		{
+//			delimiter = '\n';
+//		}
+
+		//if((data != '\n') & (delimiter))
+	}
+	index--; //to write over the delimiter
+	index--;
+	myBuffer[index] = '\0';
+	setLongReg(socReg, Sn_RX_RD_L, myRdPtr);
+	SPI_WriteByte(Sn_CR,socReg,Sn_RECV);
+	return myBuffer;
+}
+
 //**test function**//
 testTx(uint8_t socReg, uint8_t prevState){
 	// Read the Tx Write Pointer
@@ -440,4 +501,35 @@ void mainWiznet()
 	waitForEstablished(SOC0_REG);
 	sendString("here we go");
 	return;
+}
+
+void waitAndPrintBuffer(uint8_t socReg)
+{
+	uint16_t counts = 0;
+	uint8_t index = 0;
+	
+	
+	uint16_t RSR;
+	uint16_t rdPtr;
+	uint16_t myRdPtr;
+	uint16_t counter = RSR;
+	char data = 0xFF;
+	
+	while(1)
+	{
+		RSR = getLongReg(socReg, Sn_RX_RSR_L);
+		rdPtr = getLongReg(socReg, Sn_RX_RD_L);
+		counter = RSR;
+		myRdPtr = rdPtr;
+		_delay_ms(1000);
+		while(counter)
+		{
+			data = SPI_ReadByte(myRdPtr,socReg + 2);
+			sendChar(data);
+			myRdPtr++;
+			counter--;
+		}
+		setLongReg(socReg, Sn_RX_RD_L, myRdPtr);
+		SPI_WriteByte(Sn_CR,socReg,Sn_RECV);
+	}
 }

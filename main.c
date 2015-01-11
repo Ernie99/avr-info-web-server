@@ -22,6 +22,7 @@ void setTimeDayDate(uint8_t second, uint8_t minute, uint8_t hour, uint8_t day,
 int main(void)
 {
 	uartInit();
+	testHasString();
 	startSimpleWebServer(SOC0_REG);	
     while(1)
     {		

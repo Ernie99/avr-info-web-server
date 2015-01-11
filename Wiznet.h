@@ -15,10 +15,12 @@ void readWnetAndPrintSettings(void);
 // blocking methods
 void waitForEstablished(uint8_t socReg);
 char * getNewToken(uint8_t socReg, char delimiter, char * myBuff);
+char * getNewTokenCrLf(uint8_t socReg, char * myBuffer);
 // init function
 void wiznetInitAll(void);
 // test method
 void mainWiznet(void);
+void waitAndPrintBuffer(uint8_t socReg);
 
 
 #define SOC0_REG 0b00001
