@@ -32,7 +32,7 @@ DOXYFILE_ENCODING      = UTF-8
 # title of most generated pages and in a few other places.
 # The default value is: My Project.
 
-PROJECT_NAME           = avr-info-web-server
+PROJECT_NAME           ="AvrInfoWebServer"
 
 # The PROJECT_NUMBER tag can be used to enter a project or revision number. This
 # could be handy for archiving the generated documentation or if some version
@@ -58,7 +58,7 @@ PROJECT_LOGO           =
 # entered, it will be relative to the location where doxygen was started. If
 # left blank the current directory will be used.
 
-OUTPUT_DIRECTORY       = "C:/Users/Ernie/Documents/Atmel Studio/6.2/avr-info-web-server"
+OUTPUT_DIRECTORY       ="C:\Users\Ernie\Documents\Atmel Studio\6.2\avr-info-web-server\doxygen"
 
 # If the CREATE_SUBDIRS tag is set to YES, then doxygen will create 4096 sub-
 # directories (in 2 levels) under the output directory of each output format and
@@ -764,7 +764,7 @@ WARN_LOGFILE           =
 # spaces.
 # Note: If this tag is empty the current directory is searched.
 
-INPUT                  = "C:/Users/Ernie/Documents/Atmel Studio/6.2/avr-info-web-server"
+INPUT                 ="C:\Users\Ernie\Documents\Atmel Studio\6.2\avr-info-web-server\I2c.c" "C:\Users\Ernie\Documents\Atmel Studio\6.2\avr-info-web-server\I2c.h" "C:\Users\Ernie\Documents\Atmel Studio\6.2\avr-info-web-server\main.c" "C:\Users\Ernie\Documents\Atmel Studio\6.2\avr-info-web-server\RtcStrings.c" "C:\Users\Ernie\Documents\Atmel Studio\6.2\avr-info-web-server\RtcStrings.h" "C:\Users\Ernie\Documents\Atmel Studio\6.2\avr-info-web-server\SimpleServer.c" "C:\Users\Ernie\Documents\Atmel Studio\6.2\avr-info-web-server\SimpleServer.h" "C:\Users\Ernie\Documents\Atmel Studio\6.2\avr-info-web-server\UartTermBasic.c" "C:\Users\Ernie\Documents\Atmel Studio\6.2\avr-info-web-server\UartTermBasic.h" "C:\Users\Ernie\Documents\Atmel Studio\6.2\avr-info-web-server\Wiznet.c" "C:\Users\Ernie\Documents\Atmel Studio\6.2\avr-info-web-server\Wiznet.h" 
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding. Doxygen uses
