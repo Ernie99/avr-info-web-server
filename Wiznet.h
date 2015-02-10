@@ -10,7 +10,23 @@
 
 #include <stdint.h>
 
+#define SPI_PORT PORTB
+#define ETHCS PINB2
+
+#define CS_ENABLE SPI_PORT&=~_BV(ETHCS)
+#define CS_DISABLE SPI_PORT|=_BV(ETHCS)
+
+// Wiznet W5500 Register Addresses COMMON REGISTER
+#define MR   0x0000   // Mode Register
+#define GAR  0x0001   // Gateway Address: 0x0001 to 0x0004
+#define SUBR 0x0005   // Subnet mask Address: 0x0005 to 0x0008
+#define SHAR  0x0009   // Source Hardware Address (MAC): 0x0009 to 0x000E
+#define SIPR 0x000F   // Source IP Address: 0x000F to 0x0012
+
 void readWnetAndPrintSettings(void);
+
+// must toggle CS to use
+void writeIp(uint8_t byte0, uint8_t byte1, uint8_t byte2, uint8_t byte3, uint16_t reg);
 
 // blocking methods
 void waitForEstablished(uint8_t socReg);

@@ -46,7 +46,8 @@ char * writePtrReadBytes(uint8_t slaveAddressW, uint8_t slaveAddressR, uint8_t r
 //		return;
 	}
 	TWDR=reg;// write location
-	TWCR=SEND_TWDR;// send location
+	TWCR=SEND_TWDR;// send locatinook
+	
 	WAIT_FOR_FLAG;
 	if((TWSR& 0xF8)!=TW_MT_DATA_ACK){
 		errIndicate();

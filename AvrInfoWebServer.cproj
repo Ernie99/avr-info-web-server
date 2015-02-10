@@ -108,6 +108,18 @@
     </ToolchainSettings>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="ConfigServer.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ConfigServer.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="Rtc.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="Rtc.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="SimpleServer.c">
       <SubType>compile</SubType>
     </Compile>

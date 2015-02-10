@@ -16,11 +16,10 @@ void startSimpleWebServer(uint8_t socReg){
 
 ///////////now start the real stuff
 	char yay[100];
-	wiznetInitAll();
+//	wiznetInitAll();
+	waitForEstablished(socReg);
 	while(1)
 	{
-		
-		waitForEstablished(socReg);
 		getNewToken(socReg, ' ', yay);
 		sendString(yay);
 	}

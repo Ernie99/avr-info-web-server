@@ -11,14 +11,14 @@
 #include "Wiznet.h"
 
 // ports and pins, etc
-#define ETHCS PINB2
+
 #define MOSI PINB3
 #define MISO PINB4
 #define SCK PINB5
 #define SPI_DDR DDRB
 
 // AVRJazz Mega168/328 SPI I/O
-#define SPI_PORT PORTB
+
 #define SPI_DDR  DDRB
 #define SPI_CS   PORTB2
 
@@ -28,11 +28,12 @@
 #define SOC0_RXBUF 0b00011
 
 // Wiznet W5500 Register Addresses COMMON REGISTER
-#define MR   0x0000   // Mode Register
-#define GAR  0x0001   // Gateway Address: 0x0001 to 0x0004
-#define SUBR 0x0005   // Subnet mask Address: 0x0005 to 0x0008
-#define SHAR  0x0009   // Source Hardware Address (MAC): 0x0009 to 0x000E
-#define SIPR 0x000F   // Source IP Address: 0x000F to 0x0012
+//#define MR   0x0000   // Mode Register
+//#define GAR  0x0001   // Gateway Address: 0x0001 to 0x0004
+//#define SUBR 0x0005   // Subnet mask Address: 0x0005 to 0x0008
+//#define SHAR  0x0009   // Source Hardware Address (MAC): 0x0009 to 0x000E
+//#define SIPR 0x000F   // Source IP Address: 0x000F to 0x0012
+
 //#define RMSR 0x001A   // RX Memory Size Register
 //#define TMSR 0x001B   // TX Memory Size Register
 
@@ -68,8 +69,6 @@
 #define Sn_RX_WR_H 0x002A //(Socket n RX Write Pointer Register)[R][0x0000]
 #define Sn_RX_WR_L 0x002B //(Socket n RX Write Pointer Register)[R][0x0000]
 
-#define CS_ENABLE SPI_PORT&=~_BV(ETHCS)
-#define CS_DISABLE SPI_PORT|=_BV(ETHCS)
 
 // Sn_SR status codes
 const char symbol0x00[] PROGMEM = "SOCK_CLOSED";
@@ -103,13 +102,13 @@ void spiTwoBytesSend(uint16_t data);
 void SPI_WriteByte(uint16_t address, uint8_t block, uint8_t data);
 uint8_t SPI_ReadByte(uint16_t address, uint8_t block);
 uint16_t getLongReg(uint8_t socReg, uint8_t lsbAddr);
-void writeIp(uint8_t byte0, uint8_t byte1, uint8_t byte2, uint8_t byte3, uint16_t reg);
+
 //
 void wiznetSpiInit(void);
 void W5500_Init(void); // Write IP address, etc
 void W5500_Init_Soc(uint8_t socReg);
 //
-void readWnetAndPrintSettings(void);
+
 uint8_t pollStatus(char* statusString, uint8_t block);
 void pollStatusPortAndPrint(uint8_t socReg);
 void pollPointersPortAndPrint(uint8_t socReg);
@@ -205,14 +204,15 @@ void W5500_Init_Soc(uint8_t socReg){
 	//pollStatusPortAndPrint(socReg);
 	SPI_WriteByte(Sn_CR,socReg, Sn_CR_LISTEN);
 }
+
 void wiznetInitAll()
 {
 	_delay_ms(500);
 	wiznetSpiInit();
 	_delay_ms(500);
-	sendString("bla");
+//	sendString("bla");
 	W5500_Init();
-	readWnetAndPrintSettings();
+//	readWnetAndPrintSettings();
 	W5500_Init_Soc(SOC0_REG);
 }
 
@@ -241,24 +241,24 @@ void readWnetAndPrintSettings(void){
 	printOctetDec(gar0); sendChar('.');
 	printOctetDec(gar1); sendChar('.');
 	printOctetDec(gar2); sendChar('.');
-	printOctetDec(gar3); sendChar('\n');
+	printOctetDec(gar3); sendChar('\n'); sendChar('\r');
 	sendString("Subnet Mask Address: ");
 	printOctetDec(subr0); sendChar('.');
 	printOctetDec(subr1); sendChar('.');
 	printOctetDec(subr2); sendChar('.');
-	printOctetDec(subr3); sendChar('\n');
+	printOctetDec(subr3); sendChar('\n'); sendChar('\r');
 	sendString("Source hardware Address: ");
 	printOctetHex(mac0); sendChar('.');
 	printOctetHex(mac1); sendChar('.');
 	printOctetHex(mac2); sendChar('.');
 	printOctetHex(mac3); sendChar('.');
 	printOctetHex(mac4); sendChar('.');
-	printOctetHex(mac5); sendChar('\n');
+	printOctetHex(mac5); sendChar('\n'); sendChar('\r');
 	sendString("Source IP Address: ");
 	printOctetDec(sipr0); sendChar('.');
 	printOctetDec(sipr1); sendChar('.');
 	printOctetDec(sipr2); sendChar('.');
-	printOctetDec(sipr3); sendChar('\n');
+	printOctetDec(sipr3); sendChar('\n'); sendChar('\r');
 }
 uint8_t pollStatus(char* statusString, uint8_t block){
 	uint8_t code;
