@@ -289,9 +289,12 @@ uint8_t pollStatus(char* statusString, uint8_t block){
 void pollStatusPortAndPrint(uint8_t socReg){
 	char blank[] = "123456789ABCDEEF";
 	pollStatus(blank,socReg);
+	sendString("\r");
 	sendString("\n");
 	sendString(blank);
-	//	sendString("\n");
+	sendString("\r");
+		sendString("\n");
+		sendString("hello   ");
 }
 void pollPointersPortAndPrint(uint8_t socReg){
 	uint8_t data;
@@ -361,8 +364,11 @@ waitForEstablished(uint8_t socReg) // blocking
 		if(code != ps)
 		{
 			ps = code;
+			sendString("\r");
 			sendString("\n");
 			sendString(blank);
+			sendString("\r");
+			sendString("\n");
 		}
 		if(code == 0x17) //SOCK_ESTABLISHED
 		return;

@@ -12,16 +12,27 @@
 #include <avr/pgmspace.h>
 #include "UartTermBasic.h"
 
+/**************************************
+*         PRIVATE PROTOTYPES          *
+***************************************/
+void detHrdEnd(uint8_t data); //searches for 
+
 void startSimpleWebServer(uint8_t socReg){
 
 ///////////now start the real stuff
-	char yay[100];
+	char stringIn[100];
 //	wiznetInitAll();
 	waitForEstablished(socReg);
+	char lastChar;
 	while(1)
 	{
-		getNewToken(socReg, ' ', yay);
-		sendString(yay);
+		getNewToken(socReg, '\r', stringIn); // this eats up the 'r'
+		lastChar = processString(stringIn, 1);
+		if(lastChar == '\r'){
+			sendString("**we have a return**");
+		}else if(lastChar == '\n' ){
+			sendString("**we have new line**");
+		}
 	}
 	
 	return;

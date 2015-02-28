@@ -20,6 +20,12 @@ void sendChar(char x);
  */
 void sendString(char data[]);
 
+/** @brief return last char and Send string over UART, if enabled
+ *  @data[] null terminated string
+ *  @toPrint print the string if true
+ */
+char processString(char data[], uint8_t toPrint);
+
 /** @brief Clear text terminal
  */
 void ansiClear(void);

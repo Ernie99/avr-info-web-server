@@ -28,6 +28,20 @@ void sendString(char data[])
 	}
 }
 
+char processString(char data[], uint8_t toPrint)
+{
+	uint8_t i = 0;
+	char last;
+	while (data[i] != '\0')
+	{
+		last = data[i];
+		if(toPrint)
+			sendChar(last);
+		i++;
+	}
+	return last;
+}
+
 void ansiClear(void)
 {
 	// ANSI clear screen: cl=\E[H\E[J
