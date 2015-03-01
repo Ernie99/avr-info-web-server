@@ -16,6 +16,9 @@
 #define CS_ENABLE SPI_PORT&=~_BV(ETHCS)
 #define CS_DISABLE SPI_PORT|=_BV(ETHCS)
 
+#define SLAVE_ADDRESS_W 0b11010000
+#define SLAVE_ADDRESS_R 0b11010001
+
 // Wiznet W5500 Register Addresses COMMON REGISTER
 #define MR   0x0000   // Mode Register
 #define GAR  0x0001   // Gateway Address: 0x0001 to 0x0004
@@ -35,6 +38,10 @@ char * getNewToken(uint8_t socReg, char delimiter, char * myBuff);
 void wiznetInitAll(void);
 // test method
 void mainWiznet(void);
+//methods to send stuff
+sendOutString(uint8_t socReg, char data[]);
+//finish session
+void endSession(uint8_t socReg);
 
 
 #define SOC0_REG 0b00001

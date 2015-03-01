@@ -50,6 +50,10 @@
 #define Sn_MR_TCP 0b00000001 // TCP mode
 #define Sn_CR_OPEN 0x01 // open port, p69
 #define Sn_CR_LISTEN 0x02
+#define Sn_CR_DISCON 0x08
+#define Sn_CR_CLOSE 0x10
+
+
 #define Sn_PORT1_80 80 // port 80
 #define Sn_RECV 0x40// RECV command
 #define Sn_SEND 0x20// SEND command
@@ -412,6 +416,29 @@ char * getNewToken(uint8_t socReg, char delimiter, char * myBuffer) // reads wiz
 	setLongReg(socReg, Sn_RX_RD_L, myRdPtr);
 	SPI_WriteByte(Sn_CR,socReg,Sn_RECV);
 	return myBuffer;
+}
+
+sendOutString(uint8_t socReg, char data[]){
+	uint8_t i = 0;
+	// Read the Tx Write Pointer
+	uint16_t wr = getLongReg(socReg, Sn_TX_WR_L);
+	
+	while (data[i] != '\0')
+	{
+//		sendChar(data[i]);
+		SPI_WriteByte(wr+i, socReg + 1, data[i]);
+		i++;
+	}
+	setLongReg(socReg,Sn_TX_WR_L,wr + i);
+	SPI_WriteByte(Sn_CR,socReg,Sn_SEND);
+}
+
+void endSession(uint8_t socReg){
+	SPI_WriteByte(Sn_CR,socReg,Sn_CR_DISCON);
+//	SPI_WriteByte(Sn_CR,socReg,Sn_CR_CLOSE);
+	SPI_WriteByte(Sn_CR,socReg, Sn_CR_OPEN); // open
+	//pollStatusPortAndPrint(socReg);
+	SPI_WriteByte(Sn_CR,socReg, Sn_CR_LISTEN);
 }
 
 //**test function**//

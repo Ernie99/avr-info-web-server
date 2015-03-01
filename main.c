@@ -13,8 +13,6 @@
 #include "SimpleServer.h"
 #include "ConfigServer.h"
 
-#define SLAVE_ADDRESS_W 0b11010000
-#define SLAVE_ADDRESS_R 0b11010001
 
 void printTimeDayDate(void);
 void setTimeDayDate(uint8_t second, uint8_t minute, uint8_t hour, uint8_t day,
